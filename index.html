@@ -288,8 +288,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        const SUPABASE_URL = 'https://jmxtiaauezblgkichekx.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpteHRpYWF1ZXpibGdraWNoZWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDIyNjIsImV4cCI6MjA5NDYxODI2Mn0.jD0KRpdl85Cee24qwmV9nDNntR2Wk48DlJLcJnxoTyg';
+        const SUPABASE_URL = 'https://dtgludaorjsxoyxiviro.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0Z2x1ZGFvcmpzeG95eGl2aXJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMzkwNzQsImV4cCI6MjA5NDYxNTA3NH0.VUN2OWQfHZL9wTvlyJrUVDMWxXIO8Q_x0LP4B6u8Imw';
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
@@ -329,8 +329,6 @@
             btnLogin.disabled = true;
             
             try {
-                let usuarioData = null;
-                
                 const { data, error } = await supabaseClient
                     .from('usuarios')
                     .select('*')
@@ -353,16 +351,20 @@
                     return;
                 }
                 
-                usuarioData = data;
+                localStorage.setItem('usuario_id', data.id);
+                localStorage.setItem('usuario_nome', data.nome);
+                localStorage.setItem('usuario_email', data.email);
                 
-                localStorage.setItem('usuario_id', usuarioData.id);
-                localStorage.setItem('usuario_nome', usuarioData.nome);
-                localStorage.setItem('usuario_email', usuarioData.email);
+                try {
+                    await supabaseClient.rpc('set_current_user_id', { user_id: data.id });
+                } catch (rpcError) {
+                    console.log('Função RPC não disponível, continuando mesmo assim');
+                }
                 
                 await supabaseClient
                     .from('usuarios')
                     .update({ ultimo_acesso: new Date().toISOString() })
-                    .eq('id', usuarioData.id);
+                    .eq('id', data.id);
                 
                 mostrarMensagem('✅ Login realizado! Redirecionando...', 'sucesso');
                 
