@@ -288,47 +288,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // ⚠️ COLOQUE SUAS CREDENCIAIS AQUI ⚠️
-        const SUPABASE_URL = 'https://qoqrdlesznppseltfjce.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvcXJkbGVzem5wcHNlbHRmamNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5NzI3ODIsImV4cCI6MjA5NDU0ODc4Mn0.04JLwSEVGOT_nHBy5mf8UiiskCZhkz1UnTGRfqRvmdA';
+        const SUPABASE_URL = 'https://dtgludaorjsxoyxiviro.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0Z2x1ZGFvcmpzeG95eGl2aXJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMzkwNzQsImV4cCI6MjA5NDYxNTA3NH0.VUN2OWQfHZL9wTvlyJrUVDMWxXIO8Q_x0LP4B6u8Imw';
         
-        console.log('Iniciando app...');
-        console.log('Supabase disponível?', typeof supabase !== 'undefined');
-        
-        // Verificar se a biblioteca carregou
-        if (typeof supabase === 'undefined') {
-            console.error('Biblioteca Supabase não carregou!');
-            document.getElementById('mensagem').innerHTML = 'Erro ao carregar biblioteca. Recarregue a página.';
-            document.getElementById('mensagem').className = 'mensagem erro';
-            document.getElementById('mensagem').style.display = 'block';
-        }
-        
-        // Inicializar Supabase (usando a variável global 'supabase')
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Testar conexão
-        async function testarConexao() {
-            try {
-                console.log('Testando conexão com Supabase...');
-                const { data, error } = await supabaseClient.from('usuarios').select('id').limit(1);
-                if (error) {
-                    console.error('Erro detalhado:', error);
-                    mostrarMensagem('Erro: ' + error.message, 'erro');
-                    return;
-                }
-                console.log('✅ Conexão com Supabase OK!', data);
-                mostrarMensagem('✅ Conectado ao banco de dados!', 'sucesso');
-                setTimeout(() => {
-                    const msg = document.getElementById('mensagem');
-                    if (msg) msg.style.display = 'none';
-                }, 3000);
-            } catch (err) {
-                console.error('❌ Erro de conexão:', err);
-                mostrarMensagem('Erro de conexão: ' + err.message, 'erro');
-            }
-        }
-        
-        // Elementos
         const loginForm = document.getElementById('loginForm');
         const btnLogin = document.getElementById('btnLogin');
         const mensagemDiv = document.getElementById('mensagem');
@@ -344,12 +308,17 @@
             }, 5000);
         }
         
-        // Verificar se já está logado
+        function gerarUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        
         if (localStorage.getItem('usuario_id')) {
             window.location.href = 'leitor-gabarito.html';
         }
         
-        // LOGIN
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -360,7 +329,7 @@
             btnLogin.disabled = true;
             
             try {
-                console.log('Buscando usuário:', email);
+                let usuarioData = null;
                 
                 const { data, error } = await supabaseClient
                     .from('usuarios')
@@ -368,10 +337,7 @@
                     .eq('email', email)
                     .maybeSingle();
                 
-                if (error) {
-                    console.error('Erro na busca:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 
                 if (!data) {
                     mostrarMensagem('❌ E-mail não encontrado!', 'erro');
@@ -380,8 +346,6 @@
                     return;
                 }
                 
-                console.log('Usuário encontrado:', data.nome);
-                
                 if (data.senha_hash !== senha) {
                     mostrarMensagem('❌ Senha incorreta!', 'erro');
                     btnLogin.innerHTML = 'Entrar';
@@ -389,16 +353,16 @@
                     return;
                 }
                 
-                // Salvar sessão
-                localStorage.setItem('usuario_id', data.id);
-                localStorage.setItem('usuario_nome', data.nome);
-                localStorage.setItem('usuario_email', data.email);
+                usuarioData = data;
                 
-                // Atualizar último acesso
+                localStorage.setItem('usuario_id', usuarioData.id);
+                localStorage.setItem('usuario_nome', usuarioData.nome);
+                localStorage.setItem('usuario_email', usuarioData.email);
+                
                 await supabaseClient
                     .from('usuarios')
                     .update({ ultimo_acesso: new Date().toISOString() })
-                    .eq('id', data.id);
+                    .eq('id', usuarioData.id);
                 
                 mostrarMensagem('✅ Login realizado! Redirecionando...', 'sucesso');
                 
@@ -407,14 +371,13 @@
                 }, 1500);
                 
             } catch (err) {
-                console.error('Erro detalhado:', err);
+                console.error('Erro:', err);
                 mostrarMensagem('❌ Erro: ' + err.message, 'erro');
                 btnLogin.innerHTML = 'Entrar';
                 btnLogin.disabled = false;
             }
         });
         
-        // Abrir modal de cadastro
         if (linkCadastro) {
             linkCadastro.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -422,7 +385,6 @@
             });
         }
         
-        // Fechar modal
         const btnFechar = document.getElementById('btnFecharModal');
         if (btnFechar) {
             btnFechar.addEventListener('click', () => {
@@ -438,7 +400,6 @@
             });
         }
         
-        // CADASTRAR
         const btnCadastrar = document.getElementById('btnCadastrar');
         if (btnCadastrar) {
             btnCadastrar.addEventListener('click', async () => {
@@ -458,8 +419,6 @@
                 btnCad.disabled = true;
                 
                 try {
-                    console.log('Verificando se e-mail existe...');
-                    
                     const { data: existe, error: checkError } = await supabaseClient
                         .from('usuarios')
                         .select('id')
@@ -473,15 +432,17 @@
                         return;
                     }
                     
-                    console.log('Inserindo novo usuário...');
+                    const novoId = gerarUUID();
                     
                     const { error } = await supabaseClient
                         .from('usuarios')
                         .insert([{
+                            id: novoId,
                             nome: nome,
                             email: email,
                             senha_hash: senha,
-                            escola: escola || null
+                            escola: escola || null,
+                            criado_em: new Date().toISOString()
                         }]);
                     
                     if (error) throw error;
@@ -489,7 +450,6 @@
                     alert('✅ Cadastro realizado com sucesso! Faça login.');
                     modalCadastro.style.display = 'none';
                     
-                    // Limpar campos
                     document.getElementById('cadNome').value = '';
                     document.getElementById('cadEmail').value = '';
                     document.getElementById('cadSenha').value = '';
@@ -505,7 +465,6 @@
             });
         }
         
-        // Recuperar senha
         const linkRecuperar = document.getElementById('linkRecuperar');
         if (linkRecuperar) {
             linkRecuperar.addEventListener('click', (e) => {
@@ -513,11 +472,6 @@
                 alert('🔐 Entre em contato com o administrador do sistema para recuperar sua senha.');
             });
         }
-        
-        // Executar teste de conexão
-        setTimeout(() => {
-            testarConexao();
-        }, 1000);
     </script>
 </body>
 </html>

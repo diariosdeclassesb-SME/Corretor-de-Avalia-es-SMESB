@@ -13,26 +13,57 @@
         
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
-            background: #0a0a0a;
-            color: white;
+            min-height: 100vh;
+            position: relative;
             padding: 12px;
         }
         
+        .bg-institucional {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('institucional.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            filter: brightness(0.7);
+            z-index: 0;
+        }
+        
+        .bg-institucional::after {
+            content: "PREFEITURA DE SANTA BRANCA";
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: rgba(255,255,255,0.4);
+            font-size: 1rem;
+            font-weight: bold;
+            letter-spacing: 3px;
+        }
+        
         .container {
+            position: relative;
+            z-index: 1;
             max-width: 600px;
             margin: auto;
         }
         
         .header {
-            background: #1a73e8;
-            padding: 12px;
-            border-radius: 15px;
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            padding: 15px;
+            border-radius: 20px;
             text-align: center;
             margin-bottom: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
         
         .header h1 {
             font-size: 1.2rem;
+            color: white;
         }
         
         .camera-container {
@@ -45,6 +76,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.2);
         }
         
         video {
@@ -67,11 +100,17 @@
             margin: 5px 0;
             cursor: pointer;
             transition: all 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        button:active {
+            transform: scale(0.98);
         }
         
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+            transform: none;
         }
         
         .btn-foto {
@@ -99,12 +138,20 @@
             color: white;
         }
         
+        .btn-tentar-camera {
+            background: #ff9800;
+            margin-top: 5px;
+            font-size: 0.85rem;
+        }
+        
         .resultado {
-            background: #1e1e1e;
+            background: rgba(30, 30, 30, 0.95);
+            backdrop-filter: blur(10px);
             border-radius: 20px;
             padding: 15px;
             margin-top: 15px;
             display: none;
+            border: 1px solid rgba(255,255,255,0.1);
         }
         
         .acertos {
@@ -146,16 +193,19 @@
         }
         
         .info-usuario {
-            background: #2c2c2c;
+            background: rgba(44, 44, 44, 0.95);
+            backdrop-filter: blur(10px);
             padding: 10px;
             border-radius: 12px;
             margin-bottom: 12px;
             font-size: 0.85rem;
             text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
         }
         
         .status-camera {
-            background: #333;
+            background: rgba(51, 51, 51, 0.95);
+            backdrop-filter: blur(10px);
             padding: 8px;
             border-radius: 10px;
             margin-bottom: 10px;
@@ -164,12 +214,12 @@
         }
         
         .status-camera.erro {
-            background: #8b1a1a;
+            background: rgba(139, 26, 26, 0.95);
             color: #ffaaaa;
         }
         
         .status-camera.sucesso {
-            background: #1b5e1b;
+            background: rgba(27, 94, 27, 0.95);
             color: #a5d6a7;
         }
         
@@ -182,6 +232,41 @@
             width: 100%;
             border-radius: 12px;
             border: 2px solid #4caf50;
+        }
+        
+        .info-prova {
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            padding: 10px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        .info-gabarito {
+            padding: 8px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 12px;
+            font-size: 0.8rem;
+        }
+        
+        .info-gabarito.carregado {
+            background: rgba(76, 175, 80, 0.9);
+        }
+        
+        .info-gabarito.nao-carregado {
+            background: rgba(255, 68, 68, 0.9);
+        }
+        
+        .row-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .row-buttons button {
+            flex: 1;
         }
         
         .modal {
@@ -288,32 +373,6 @@
             background: #666;
         }
         
-        .info-prova {
-            background: #1a73e8;
-            padding: 10px;
-            border-radius: 12px;
-            text-align: center;
-            margin-bottom: 12px;
-            font-size: 0.85rem;
-            font-weight: bold;
-        }
-        
-        .info-gabarito {
-            padding: 8px;
-            border-radius: 10px;
-            text-align: center;
-            margin-bottom: 12px;
-            font-size: 0.8rem;
-        }
-        
-        .info-gabarito.carregado {
-            background: #4caf50;
-        }
-        
-        .info-gabarito.nao-carregado {
-            background: #ff4444;
-        }
-        
         .btn-reset {
             background: #ff4444;
             margin-top: 10px;
@@ -399,22 +458,13 @@
         }
         
         .debug-info {
-            background: #1a1a2e;
+            background: rgba(26, 26, 46, 0.95);
             padding: 8px;
             border-radius: 8px;
             margin-top: 10px;
             font-size: 0.65rem;
             font-family: monospace;
             display: none;
-        }
-        
-        .row-buttons {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .row-buttons button {
-            flex: 1;
         }
         
         .loading {
@@ -432,825 +482,808 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        
-        .btn-tentar-camera {
-            background: #ff9800;
-            margin-top: 5px;
-            font-size: 0.85rem;
-        }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="header">
-        <h1>📸 Corrige Gabarito</h1>
-    </div>
+    <div class="bg-institucional"></div>
     
-    <div class="info-usuario" id="infoUsuario">
-        Carregando...
-    </div>
-    
-    <div class="info-prova" id="infoProva">
-        📋 Nenhuma prova selecionada
-    </div>
-    
-    <div class="info-gabarito nao-carregado" id="infoGabarito">
-        ⚠️ Selecione ou crie uma prova
-    </div>
-    
-    <div class="status-camera" id="statusCamera">
-        ⚠️ Iniciando câmera...
-    </div>
-    
-    <div class="camera-container">
-        <video id="video" autoplay playsinline muted></video>
-    </div>
-    
-    <button class="btn-tentar-camera" id="btnTentarCamera">🔄 Tentar reiniciar câmera</button>
-    
-    <div class="preview-area" id="previewArea">
-        <img id="previewImg" alt="Preview da folha capturada">
-    </div>
-    
-    <div class="row-buttons">
-        <button class="btn-provas" id="btnGerenciarProvas">📚 Provas</button>
-        <button class="btn-foto" id="btnCapturar" disabled>📷 Capturar</button>
-    </div>
-    
-    <button class="btn-gabarito" id="btnAbrirGabaritoNovo" disabled>📝 Editar Gabarito</button>
-    <button class="btn-corrigir" id="btnCorrigir" disabled>🔍 Corrigir Prova</button>
-    <button class="btn-sair" id="btnSair">🚪 Sair</button>
-    
-    <div id="resultadoPanel" class="resultado"></div>
-    <div id="debugInfo" class="debug-info"></div>
-</div>
-
-<!-- Modal de Gerenciamento de Provas -->
-<div id="modalProvas" class="modal">
-    <div class="modal-content">
-        <h2>📚 Minhas Provas</h2>
-        <button class="btn-nova-prova" id="btnNovaProva">➕ Criar Nova Prova</button>
-        <div id="listaProvas" class="lista-provas"></div>
-        <button id="btnFecharProvas" class="btn-fechar-modal">Fechar</button>
-    </div>
-</div>
-
-<!-- Modal de Criar/Editar Prova -->
-<div id="modalEditarProva" class="modal">
-    <div class="modal-content">
-        <h2 id="modalEditarTitulo">📝 Criar Nova Prova</h2>
-        <div class="config-item">
-            <label>📛 Nome da prova:</label>
-            <input type="text" id="provaNome" placeholder="Ex: Prova 1 - Matemática">
+    <div class="container">
+        <div class="header">
+            <h1>📸 Corrige Gabarito</h1>
         </div>
-        <div class="config-item">
-            <label>📊 Quantidade de questões:</label>
-            <input type="number" id="provaNumQuestoes" min="10" max="100" step="5" value="50">
-        </div>
-        <div class="config-item">
-            <label>🔤 Número de alternativas:</label>
-            <select id="provaNumOpcoes">
-                <option value="4">4 opções (A, B, C, D)</option>
-                <option value="5" selected>5 opções (A, B, C, D, E)</option>
-                <option value="6">6 opções (A, B, C, D, E, F)</option>
-            </select>
-        </div>
-        <div class="botoes-rapidos">
-            <button class="btn-rapido" data-questoes="20">20q</button>
-            <button class="btn-rapido" data-questoes="30">30q</button>
-            <button class="btn-rapido" data-questoes="40">40q</button>
-            <button class="btn-rapido" data-questoes="50">50q</button>
-        </div>
-        <div class="modal-buttons">
-            <button id="btnCriarProva" class="btn-salvar-gabarito">💾 Criar Prova</button>
-            <button id="btnCancelarEdicao" class="btn-fechar-modal">Cancelar</button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal do Gabarito -->
-<div id="modalGabarito" class="modal">
-    <div class="modal-content">
-        <h2 id="modalGabaritoTitulo">📝 Cadastrar Gabarito</h2>
-        <div style="text-align: center; margin-bottom: 15px; font-size: 0.75rem; color: #aaa;" id="infoQuestoes">
+        
+        <div class="info-usuario" id="infoUsuario">
             Carregando...
         </div>
-        <div id="gabaritoLista" class="gabarito-grid"></div>
-        <div class="modal-buttons">
-            <button id="btnSalvarGabarito" class="btn-salvar-gabarito">💾 Salvar Gabarito</button>
-            <button id="btnFecharGabarito" class="btn-fechar-modal">Fechar</button>
+        
+        <div class="info-prova" id="infoProva">
+            📋 Nenhuma prova selecionada
         </div>
-        <button id="btnResetGabarito" class="btn-reset">🔄 Resetar Gabarito</button>
+        
+        <div class="info-gabarito nao-carregado" id="infoGabarito">
+            ⚠️ Selecione ou crie uma prova
+        </div>
+        
+        <div class="status-camera" id="statusCamera">
+            ⚠️ Iniciando câmera...
+        </div>
+        
+        <div class="camera-container">
+            <video id="video" autoplay playsinline muted></video>
+        </div>
+        
+        <button class="btn-tentar-camera" id="btnTentarCamera">🔄 Tentar reiniciar câmera</button>
+        
+        <div class="preview-area" id="previewArea">
+            <img id="previewImg" alt="Preview da folha capturada">
+        </div>
+        
+        <div class="row-buttons">
+            <button class="btn-provas" id="btnGerenciarProvas">📚 Provas</button>
+            <button class="btn-foto" id="btnCapturar" disabled>📷 Capturar</button>
+        </div>
+        
+        <button class="btn-gabarito" id="btnAbrirGabaritoNovo" disabled>📝 Editar Gabarito</button>
+        <button class="btn-corrigir" id="btnCorrigir" disabled>🔍 Corrigir Prova</button>
+        <button class="btn-sair" id="btnSair">🚪 Sair</button>
+        
+        <div id="resultadoPanel" class="resultado"></div>
+        <div id="debugInfo" class="debug-info"></div>
     </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    // ============================================
-    // SUPABASE CONFIGURATION - COLOQUE SUAS CREDENCIAIS
-    // ============================================
-    const SUPABASE_URL = 'https://dtgludaorjsxoyxiviro.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0Z2x1ZGFvcmpzeG95eGl2aXJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMzkwNzQsImV4cCI6MjA5NDYxNTA3NH0.VUN2OWQfHZL9wTvlyJrUVDMWxXIO8Q_x0LP4B6u8Imw';
     
-    // Criar cliente Supabase (APENAS UMA VEZ)
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    <!-- Modal de Gerenciamento de Provas -->
+    <div id="modalProvas" class="modal">
+        <div class="modal-content">
+            <h2>📚 Minhas Provas</h2>
+            <button class="btn-nova-prova" id="btnNovaProva">➕ Criar Nova Prova</button>
+            <div id="listaProvas" class="lista-provas"></div>
+            <button id="btnFecharProvas" class="btn-fechar-modal">Fechar</button>
+        </div>
+    </div>
     
-    // ============================================
-    // CONFIGURAÇÕES
-    // ============================================
-    let provas = [];
-    let provaAtual = null;
-    let NUM_QUESTOES = 50;
-    let NUM_OPCOES = 5;
-    let OPCOES = ['A', 'B', 'C', 'D', 'E'];
-    let gabarito = [];
+    <!-- Modal de Criar/Editar Prova -->
+    <div id="modalEditarProva" class="modal">
+        <div class="modal-content">
+            <h2 id="modalEditarTitulo">📝 Criar Nova Prova</h2>
+            <div class="config-item">
+                <label>📛 Nome da prova:</label>
+                <input type="text" id="provaNome" placeholder="Ex: Prova 1 - Matemática">
+            </div>
+            <div class="config-item">
+                <label>📊 Quantidade de questões:</label>
+                <input type="number" id="provaNumQuestoes" min="10" max="100" step="5" value="50">
+            </div>
+            <div class="config-item">
+                <label>🔤 Número de alternativas:</label>
+                <select id="provaNumOpcoes">
+                    <option value="4">4 opções (A, B, C, D)</option>
+                    <option value="5" selected>5 opções (A, B, C, D, E)</option>
+                    <option value="6">6 opções (A, B, C, D, E, F)</option>
+                </select>
+            </div>
+            <div class="botoes-rapidos">
+                <button class="btn-rapido" data-questoes="20">20q</button>
+                <button class="btn-rapido" data-questoes="30">30q</button>
+                <button class="btn-rapido" data-questoes="40">40q</button>
+                <button class="btn-rapido" data-questoes="50">50q</button>
+            </div>
+            <div class="modal-buttons">
+                <button id="btnCriarProva" class="btn-salvar-gabarito">💾 Criar Prova</button>
+                <button id="btnCancelarEdicao" class="btn-fechar-modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
     
-    const LIMIAR_PREENCHIMENTO = 0.35;
-    const BRILHO_MAXIMO_PREENCHIDO = 100;
+    <!-- Modal do Gabarito -->
+    <div id="modalGabarito" class="modal">
+        <div class="modal-content">
+            <h2 id="modalGabaritoTitulo">📝 Cadastrar Gabarito</h2>
+            <div style="text-align: center; margin-bottom: 15px; font-size: 0.75rem; color: #aaa;" id="infoQuestoes">
+                Carregando...
+            </div>
+            <div id="gabaritoLista" class="gabarito-grid"></div>
+            <div class="modal-buttons">
+                <button id="btnSalvarGabarito" class="btn-salvar-gabarito">💾 Salvar Gabarito</button>
+                <button id="btnFecharGabarito" class="btn-fechar-modal">Fechar</button>
+            </div>
+            <button id="btnResetGabarito" class="btn-reset">🔄 Resetar Gabarito</button>
+        </div>
+    </div>
     
-    const usuarioId = localStorage.getItem('usuario_id');
-    const usuarioNome = localStorage.getItem('usuario_nome');
-    
-    // VERIFICAR LOGIN
-    if (!usuarioId) {
-        alert('⚠️ Faça login primeiro!');
-        window.location.href = 'index.html';
-    }
-    
-    document.getElementById('infoUsuario').innerHTML = `👨‍🏫 Olá, ${usuarioNome || 'Professor'}!`;
-    
-    // ============================================
-    // FUNÇÕES DO SUPABASE
-    // ============================================
-    
-    async function carregarProvasDoSupabase() {
-        try {
-            const { data, error } = await supabaseClient
-                .from('provas')
-                .select('*')
-                .eq('usuario_id', usuarioId)
-                .order('criado_em', { ascending: false });
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://dtgludaorjsxoyxiviro.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0Z2x1ZGFvcmpzeG95eGl2aXJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMzkwNzQsImV4cCI6MjA5NDYxNTA3NH0.VUN2OWQfHZL9wTvlyJrUVDMWxXIO8Q_x0LP4B6u8Imw';
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let provas = [];
+        let provaAtual = null;
+        let NUM_QUESTOES = 50;
+        let NUM_OPCOES = 5;
+        let OPCOES = ['A', 'B', 'C', 'D', 'E'];
+        let gabarito = [];
+        
+        const LIMIAR_PREENCHIMENTO = 0.35;
+        const BRILHO_MAXIMO_PREENCHIDO = 100;
+        
+        const usuarioId = localStorage.getItem('usuario_id');
+        const usuarioNome = localStorage.getItem('usuario_nome');
+        
+        if (!usuarioId) {
+            alert('⚠️ Faça login primeiro!');
+            window.location.href = 'index.html';
+        }
+        
+        document.getElementById('infoUsuario').innerHTML = `👨‍🏫 Olá, ${usuarioNome || 'Professor'}!`;
+        
+        async function garantirUsuarioExistente() {
+            const { data: existe, error } = await supabaseClient
+                .from('usuarios')
+                .select('id')
+                .eq('id', usuarioId)
+                .maybeSingle();
             
-            if (error) throw error;
-            
-            provas = data || [];
-            if (provas.length === 0) {
-                await criarProvaExemplo();
-            } else {
-                renderizarListaProvas();
-                if (provas.length > 0 && !provaAtual) {
-                    selecionarProva(provas[0].id);
-                }
+            if (!existe && !error) {
+                console.log('Usuário não encontrado na tabela, criando...');
+                await supabaseClient
+                    .from('usuarios')
+                    .insert([{
+                        id: usuarioId,
+                        nome: usuarioNome || 'Professor',
+                        email: localStorage.getItem('usuario_email') || '',
+                        senha_hash: 'temp',
+                        criado_em: new Date().toISOString()
+                    }]);
             }
-        } catch (err) {
-            console.error('Erro ao carregar provas:', err);
-            document.getElementById('infoGabarito').innerHTML = '⚠️ Erro ao carregar provas';
         }
-    }
-    
-    async function criarProvaExemplo() {
-        const gabaritoExemplo = new Array(50).fill('A');
         
-        const { error } = await supabaseClient
-            .from('provas')
-            .insert([{
-                usuario_id: usuarioId,
-                nome_prova: 'Prova Exemplo',
-                num_questoes: 50,
-                opcoes_por_questao: 5,
-                gabarito: gabaritoExemplo,
-                pesos: new Array(50).fill(1)
-            }]);
-        
-        if (error) {
-            console.error('Erro ao criar prova exemplo:', error);
-        } else {
-            await carregarProvasDoSupabase();
+        async function carregarProvasDoSupabase() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('provas')
+                    .select('*')
+                    .eq('usuario_id', usuarioId)
+                    .order('criado_em', { ascending: false });
+                
+                if (error) throw error;
+                
+                provas = data || [];
+                if (provas.length === 0) {
+                    await criarProvaExemplo();
+                } else {
+                    renderizarListaProvas();
+                    if (provas.length > 0 && !provaAtual) {
+                        selecionarProva(provas[0].id);
+                    }
+                }
+            } catch (err) {
+                console.error('Erro ao carregar provas:', err);
+                document.getElementById('infoGabarito').innerHTML = '⚠️ Erro ao carregar provas';
+            }
         }
-    }
-    
-    async function selecionarProva(provaId) {
-        try {
-            const { data, error } = await supabaseClient
-                .from('provas')
-                .select('*')
-                .eq('id', provaId)
-                .single();
-            
-            if (error) throw error;
-            
-            provaAtual = data;
-            NUM_QUESTOES = data.num_questoes;
-            NUM_OPCOES = data.opcoes_por_questao;
-            atualizarOpcoes();
-            gabarito = [...data.gabarito];
-            
-            document.getElementById('infoProva').innerHTML = `📋 ${provaAtual.nome_prova} (${NUM_QUESTOES} questões)`;
-            document.getElementById('infoGabarito').innerHTML = `✅ Gabarito carregado!`;
-            document.getElementById('infoGabarito').className = 'info-gabarito carregado';
-            
-            document.getElementById('btnAbrirGabaritoNovo').disabled = false;
-        } catch (err) {
-            console.error('Erro ao selecionar prova:', err);
-        }
-    }
-    
-    async function salvarProva(nome, numQuestoes, numOpcoes, editId = null) {
-        const opcoes = [];
-        for (let i = 0; i < numOpcoes; i++) opcoes.push(String.fromCharCode(65 + i));
-        const novoGabarito = new Array(numQuestoes).fill(opcoes[0]);
-        const pesos = new Array(numQuestoes).fill(1);
         
-        if (editId) {
-            const { error } = await supabaseClient
-                .from('provas')
-                .update({
-                    nome_prova: nome,
-                    num_questoes: numQuestoes,
-                    opcoes_por_questao: numOpcoes,
-                    gabarito: novoGabarito,
-                    pesos: pesos
-                })
-                .eq('id', editId)
-                .eq('usuario_id', usuarioId);
+        async function criarProvaExemplo() {
+            const gabaritoExemplo = new Array(50).fill('A');
             
-            if (error) throw error;
-        } else {
             const { error } = await supabaseClient
                 .from('provas')
                 .insert([{
                     usuario_id: usuarioId,
-                    nome_prova: nome,
-                    num_questoes: numQuestoes,
-                    opcoes_por_questao: numOpcoes,
-                    gabarito: novoGabarito,
-                    pesos: pesos
+                    nome_prova: 'Prova Exemplo',
+                    num_questoes: 50,
+                    opcoes_por_questao: 5,
+                    gabarito: gabaritoExemplo,
+                    pesos: new Array(50).fill(1)
                 }]);
             
-            if (error) throw error;
-        }
-        
-        await carregarProvasDoSupabase();
-    }
-    
-    async function excluirProva(provaId) {
-        const { error } = await supabaseClient
-            .from('provas')
-            .delete()
-            .eq('id', provaId)
-            .eq('usuario_id', usuarioId);
-        
-        if (error) throw error;
-        
-        if (provaAtual && provaAtual.id === provaId) {
-            provaAtual = null;
-            document.getElementById('infoProva').innerHTML = '📋 Nenhuma prova selecionada';
-            document.getElementById('infoGabarito').innerHTML = '⚠️ Selecione ou crie uma prova';
-            document.getElementById('infoGabarito').className = 'info-gabarito nao-carregado';
-            document.getElementById('btnAbrirGabaritoNovo').disabled = true;
-        }
-        
-        await carregarProvasDoSupabase();
-    }
-    
-    async function salvarCorrecao(acertos, nota, respostasAluno) {
-        if (!provaAtual) return;
-        
-        let imagemBase64 = null;
-        if (imagemCapturada) {
-            imagemBase64 = imagemCapturada.toDataURL('image/jpeg', 0.5);
-            if (imagemBase64.length > 500000) {
-                imagemBase64 = imagemBase64.substring(0, 500000);
+            if (error) {
+                console.error('Erro ao criar prova exemplo:', error);
+            } else {
+                await carregarProvasDoSupabase();
             }
         }
         
-        const { error } = await supabaseClient
-            .from('correcoes')
-            .insert([{
-                prova_id: provaAtual.id,
-                usuario_id: usuarioId,
-                respostas_aluno: respostasAluno,
-                acertos: acertos,
-                pontuacao_total: acertos,
-                nota: nota,
-                imagem_base64: imagemBase64,
-                data_correcao: new Date().toISOString()
-            }]);
-        
-        if (error) {
-            console.error('Erro ao salvar correção:', error);
-        } else {
-            console.log('✅ Correção salva!');
-        }
-    }
-    
-    function atualizarOpcoes() {
-        OPCOES = [];
-        for (let i = 0; i < NUM_OPCOES; i++) {
-            OPCOES.push(String.fromCharCode(65 + i));
-        }
-    }
-    
-    async function salvarGabaritoProvaAtual() {
-        if (!provaAtual) return;
-        
-        const { error } = await supabaseClient
-            .from('provas')
-            .update({ gabarito: gabarito })
-            .eq('id', provaAtual.id)
-            .eq('usuario_id', usuarioId);
-        
-        if (error) {
-            alert('Erro ao salvar gabarito: ' + error.message);
-        } else {
-            alert('✅ Gabarito salvo com sucesso!');
-        }
-    }
-    
-    // ============================================
-    // CÂMERA
-    // ============================================
-    
-    const video = document.getElementById('video');
-    const btnCapturar = document.getElementById('btnCapturar');
-    const btnCorrigir = document.getElementById('btnCorrigir');
-    const btnTentarCamera = document.getElementById('btnTentarCamera');
-    const statusCamera = document.getElementById('statusCamera');
-    const previewArea = document.getElementById('previewArea');
-    const previewImg = document.getElementById('previewImg');
-    const debugDiv = document.getElementById('debugInfo');
-    
-    let stream = null;
-    let imagemCapturada = null;
-    
-    async function iniciarCamera() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
+        async function selecionarProva(provaId) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('provas')
+                    .select('*')
+                    .eq('id', provaId)
+                    .single();
+                
+                if (error) throw error;
+                
+                provaAtual = data;
+                NUM_QUESTOES = data.num_questoes;
+                NUM_OPCOES = data.opcoes_por_questao;
+                atualizarOpcoes();
+                gabarito = [...data.gabarito];
+                
+                document.getElementById('infoProva').innerHTML = `📋 ${provaAtual.nome_prova} (${NUM_QUESTOES} questões)`;
+                document.getElementById('infoGabarito').innerHTML = `✅ Gabarito carregado!`;
+                document.getElementById('infoGabarito').className = 'info-gabarito carregado';
+                
+                document.getElementById('btnAbrirGabaritoNovo').disabled = false;
+            } catch (err) {
+                console.error('Erro ao selecionar prova:', err);
+            }
         }
         
-        statusCamera.innerHTML = '📷 Solicitando permissão da câmera...';
-        statusCamera.className = 'status-camera';
+        async function salvarProva(nome, numQuestoes, numOpcoes, editId = null) {
+            const opcoes = [];
+            for (let i = 0; i < numOpcoes; i++) opcoes.push(String.fromCharCode(65 + i));
+            const novoGabarito = new Array(numQuestoes).fill(opcoes[0]);
+            const pesos = new Array(numQuestoes).fill(1);
+            
+            if (editId) {
+                const { error } = await supabaseClient
+                    .from('provas')
+                    .update({
+                        nome_prova: nome,
+                        num_questoes: numQuestoes,
+                        opcoes_por_questao: numOpcoes,
+                        gabarito: novoGabarito,
+                        pesos: pesos
+                    })
+                    .eq('id', editId)
+                    .eq('usuario_id', usuarioId);
+                
+                if (error) throw error;
+            } else {
+                const { error } = await supabaseClient
+                    .from('provas')
+                    .insert([{
+                        usuario_id: usuarioId,
+                        nome_prova: nome,
+                        num_questoes: numQuestoes,
+                        opcoes_por_questao: numOpcoes,
+                        gabarito: novoGabarito,
+                        pesos: pesos
+                    }]);
+                
+                if (error) throw error;
+            }
+            
+            await carregarProvasDoSupabase();
+        }
         
-        try {
-            const constraints = {
-                video: {
-                    facingMode: { exact: "environment" },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
+        async function excluirProva(provaId) {
+            const { error } = await supabaseClient
+                .from('provas')
+                .delete()
+                .eq('id', provaId)
+                .eq('usuario_id', usuarioId);
+            
+            if (error) throw error;
+            
+            if (provaAtual && provaAtual.id === provaId) {
+                provaAtual = null;
+                document.getElementById('infoProva').innerHTML = '📋 Nenhuma prova selecionada';
+                document.getElementById('infoGabarito').innerHTML = '⚠️ Selecione ou crie uma prova';
+                document.getElementById('infoGabarito').className = 'info-gabarito nao-carregado';
+                document.getElementById('btnAbrirGabaritoNovo').disabled = true;
+            }
+            
+            await carregarProvasDoSupabase();
+        }
+        
+        async function salvarCorrecao(acertos, nota, respostasAluno) {
+            if (!provaAtual) return;
+            
+            let imagemBase64 = null;
+            if (imagemCapturada) {
+                imagemBase64 = imagemCapturada.toDataURL('image/jpeg', 0.5);
+                if (imagemBase64.length > 500000) {
+                    imagemBase64 = imagemBase64.substring(0, 500000);
                 }
-            };
+            }
             
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = stream;
-            await video.play();
+            const { error } = await supabaseClient
+                .from('correcoes')
+                .insert([{
+                    prova_id: provaAtual.id,
+                    usuario_id: usuarioId,
+                    respostas_aluno: respostasAluno,
+                    acertos: acertos,
+                    pontuacao_total: acertos,
+                    nota: nota,
+                    imagem_base64: imagemBase64,
+                    data_correcao: new Date().toISOString()
+                }]);
             
-            statusCamera.innerHTML = '✅ Câmera pronta! Enquadre a folha';
-            statusCamera.className = 'status-camera sucesso';
-            btnCapturar.disabled = false;
+            if (error) {
+                console.error('Erro ao salvar correção:', error);
+            } else {
+                console.log('✅ Correção salva!');
+            }
+        }
+        
+        function atualizarOpcoes() {
+            OPCOES = [];
+            for (let i = 0; i < NUM_OPCOES; i++) {
+                OPCOES.push(String.fromCharCode(65 + i));
+            }
+        }
+        
+        async function salvarGabaritoProvaAtual() {
+            if (!provaAtual) return;
             
-        } catch (err) {
-            console.error('Erro câmera:', err);
+            const { error } = await supabaseClient
+                .from('provas')
+                .update({ gabarito: gabarito })
+                .eq('id', provaAtual.id)
+                .eq('usuario_id', usuarioId);
+            
+            if (error) {
+                alert('Erro ao salvar gabarito: ' + error.message);
+            } else {
+                alert('✅ Gabarito salvo com sucesso!');
+            }
+        }
+        
+        const video = document.getElementById('video');
+        const btnCapturar = document.getElementById('btnCapturar');
+        const btnCorrigir = document.getElementById('btnCorrigir');
+        const btnTentarCamera = document.getElementById('btnTentarCamera');
+        const statusCamera = document.getElementById('statusCamera');
+        const previewArea = document.getElementById('previewArea');
+        const previewImg = document.getElementById('previewImg');
+        const debugDiv = document.getElementById('debugInfo');
+        
+        let stream = null;
+        let imagemCapturada = null;
+        
+        async function iniciarCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            
+            statusCamera.innerHTML = '📷 Solicitando permissão da câmera...';
+            statusCamera.className = 'status-camera';
             
             try {
-                const fallbackConstraints = { video: true };
-                stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+                const constraints = {
+                    video: {
+                        facingMode: { exact: "environment" },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                };
+                
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
                 await video.play();
                 
-                statusCamera.innerHTML = '✅ Câmera pronta! (modo alternativo)';
+                statusCamera.innerHTML = '✅ Câmera pronta! Enquadre a folha';
                 statusCamera.className = 'status-camera sucesso';
                 btnCapturar.disabled = false;
                 
-            } catch (fallbackErr) {
-                statusCamera.innerHTML = '❌ Não foi possível acessar a câmera. Verifique as permissões.';
-                statusCamera.className = 'status-camera erro';
-                btnCapturar.disabled = true;
-            }
-        }
-    }
-    
-    btnTentarCamera.addEventListener('click', () => {
-        iniciarCamera();
-    });
-    
-    btnCapturar.addEventListener('click', () => {
-        if (!video.videoWidth || video.videoWidth === 0) {
-            alert('Aguarde a câmera iniciar completamente!');
-            return;
-        }
-        
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = video.videoWidth;
-        tempCanvas.height = video.videoHeight;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-        
-        imagemCapturada = tempCanvas;
-        previewImg.src = tempCanvas.toDataURL('image/jpeg');
-        previewArea.style.display = 'block';
-        btnCorrigir.disabled = false;
-        statusCamera.innerHTML = '✅ Folha capturada! Clique em CORRIGIR';
-    });
-    
-    // ============================================
-    // ALGORITMO DE LEITURA
-    // ============================================
-    
-    function getPixelBrilho(ctx, x, y) {
-        if (x < 0 || y < 0 || x >= ctx.canvas.width || y >= ctx.canvas.height) return 255;
-        const pixel = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
-        return (pixel[0] + pixel[1] + pixel[2]) / 3;
-    }
-    
-    function analisarPreenchimentoCirculo(ctx, cx, cy, raio) {
-        let pixelsEscuros = 0;
-        let totalPixels = 0;
-        
-        for (let dx = -raio; dx <= raio; dx += Math.max(1, Math.floor(raio / 4))) {
-            for (let dy = -raio; dy <= raio; dy += Math.max(1, Math.floor(raio / 4))) {
-                if (dx*dx + dy*dy <= raio*raio) {
-                    const brilho = getPixelBrilho(ctx, cx + dx, cy + dy);
-                    totalPixels++;
-                    if (brilho < BRILHO_MAXIMO_PREENCHIDO) {
-                        pixelsEscuros++;
-                    }
-                }
-            }
-        }
-        
-        if (totalPixels === 0) return false;
-        const percentualPreenchido = pixelsEscuros / totalPixels;
-        return percentualPreenchido > LIMIAR_PREENCHIMENTO;
-    }
-    
-    function detectarRespostasDaImagem(imgCanvas) {
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCanvas.width = imgCanvas.width;
-        tempCanvas.height = imgCanvas.height;
-        tempCtx.drawImage(imgCanvas, 0, 0);
-        
-        const largura = tempCanvas.width;
-        const altura = tempCanvas.height;
-        
-        const LINHAS = Math.ceil(Math.sqrt(NUM_QUESTOES));
-        const COLUNAS = Math.ceil(NUM_QUESTOES / LINHAS);
-        
-        const alturaLinha = altura / LINHAS;
-        const larguraColuna = largura / COLUNAS;
-        const raioCirculo = Math.min(alturaLinha, larguraColuna) * 0.12;
-        
-        const posicoesCirculos = [];
-        const espacamento = larguraColuna / (NUM_OPCOES + 1);
-        for (let opt = 0; opt < NUM_OPCOES; opt++) {
-            posicoesCirculos.push({ offsetX: (opt + 1) * espacamento - larguraColuna/2, offsetY: 0 });
-        }
-        
-        const respostas = [];
-        let questoesComPreenchimento = 0;
-        
-        for (let questao = 0; questao < NUM_QUESTOES; questao++) {
-            const linha = Math.floor(questao / COLUNAS);
-            const coluna = questao % COLUNAS;
-            const cellCenterX = (coluna + 0.5) * larguraColuna;
-            const cellCenterY = (linha + 0.5) * alturaLinha;
-            
-            let opcaoEncontrada = -1;
-            
-            for (let opt = 0; opt < NUM_OPCOES; opt++) {
-                const cx = cellCenterX + posicoesCirculos[opt].offsetX;
-                const cy = cellCenterY + posicoesCirculos[opt].offsetY;
-                
-                if (analisarPreenchimentoCirculo(tempCtx, cx, cy, raioCirculo)) {
-                    opcaoEncontrada = opt;
-                    questoesComPreenchimento++;
-                    break;
-                }
-            }
-            
-            if (opcaoEncontrada >= 0) {
-                respostas.push(OPCOES[opcaoEncontrada]);
-            } else {
-                respostas.push(null);
-            }
-        }
-        
-        debugDiv.innerHTML = `📊 Detectadas: ${questoesComPreenchimento} questões preenchidas de ${NUM_QUESTOES}`;
-        debugDiv.style.display = 'block';
-        
-        return respostas;
-    }
-    
-    btnCorrigir.addEventListener('click', async () => {
-        if (!imagemCapturada) {
-            alert('Capture uma foto primeiro!');
-            return;
-        }
-        if (!provaAtual) {
-            alert('Selecione uma prova primeiro!');
-            return;
-        }
-        
-        btnCorrigir.innerHTML = '🔄 Processando...';
-        btnCorrigir.disabled = true;
-        
-        setTimeout(async () => {
-            try {
-                const respostasAluno = detectarRespostasDaImagem(imagemCapturada);
-                
-                let acertos = 0;
-                let questoesValidas = 0;
-                const detalhes = [];
-                const respostasParaSalvar = [];
-                
-                for (let i = 0; i < NUM_QUESTOES; i++) {
-                    const alunoResp = respostasAluno[i];
-                    const correta = gabarito[i];
-                    
-                    if (alunoResp === null) {
-                        detalhes.push({
-                            num: i + 1,
-                            aluno: '○',
-                            gabarito: correta,
-                            certo: false
-                        });
-                        respostasParaSalvar.push(null);
-                    } else {
-                        questoesValidas++;
-                        const certo = (alunoResp === correta);
-                        if (certo) acertos++;
-                        detalhes.push({
-                            num: i + 1,
-                            aluno: alunoResp,
-                            gabarito: correta,
-                            certo: certo
-                        });
-                        respostasParaSalvar.push(alunoResp);
-                    }
-                }
-                
-                const nota = (acertos / NUM_QUESTOES) * 10;
-                
-                await salvarCorrecao(acertos, nota, respostasParaSalvar);
-                
-                const resultadoPanel = document.getElementById('resultadoPanel');
-                resultadoPanel.style.display = 'block';
-                
-                resultadoPanel.innerHTML = `
-                    <div class="acertos">✅ ${acertos} / ${NUM_QUESTOES}</div>
-                    <div class="nota">🎓 NOTA: ${nota.toFixed(1)}</div>
-                    <div style="text-align:center; padding:8px; background:#333; border-radius:10px; margin:8px 0; font-size:0.8rem;">
-                        ${questoesValidas} questões detectadas | ${NUM_QUESTOES - questoesValidas} não preenchidas
-                    </div>
-                    <div style="text-align:center; margin:5px 0; padding:8px; background:#2c2c2c; border-radius:10px;">
-                        ${nota >= 6 ? '🎉 APROVADO! 🎉' : '📚 RECUPERAÇÃO 📚'}
-                    </div>
-                    <div class="detalhes" id="detalhesGrid"></div>
-                    <button class="btn-novo" id="btnNovaCorrecao">📷 Nova Correção</button>
-                `;
-                
-                const grid = document.getElementById('detalhesGrid');
-                grid.innerHTML = '';
-                detalhes.forEach(d => {
-                    const div = document.createElement('div');
-                    div.className = d.certo ? 'item-certo' : 'item-errado';
-                    const alunoShow = d.aluno === '○' ? '⚪' : d.aluno;
-                    div.innerHTML = `<strong>${d.num}</strong><br>${alunoShow}<br><small>(${d.gabarito})</small>`;
-                    grid.appendChild(div);
-                });
-                
-                document.getElementById('btnNovaCorrecao').addEventListener('click', () => {
-                    resultadoPanel.style.display = 'none';
-                    previewArea.style.display = 'none';
-                    imagemCapturada = null;
-                    btnCorrigir.disabled = true;
-                    btnCorrigir.innerHTML = '🔍 Corrigir Prova';
-                    debugDiv.style.display = 'none';
-                });
-                
             } catch (err) {
-                debugDiv.innerHTML = `Erro: ${err.message}`;
-                alert('Erro ao processar: ' + err.message);
+                console.error('Erro câmera:', err);
+                
+                try {
+                    const fallbackConstraints = { video: true };
+                    stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+                    video.srcObject = stream;
+                    await video.play();
+                    
+                    statusCamera.innerHTML = '✅ Câmera pronta! (modo alternativo)';
+                    statusCamera.className = 'status-camera sucesso';
+                    btnCapturar.disabled = false;
+                    
+                } catch (fallbackErr) {
+                    statusCamera.innerHTML = '❌ Não foi possível acessar a câmera. Verifique as permissões.';
+                    statusCamera.className = 'status-camera erro';
+                    btnCapturar.disabled = true;
+                }
             }
-            btnCorrigir.innerHTML = '🔍 Corrigir Prova';
+        }
+        
+        btnTentarCamera.addEventListener('click', () => {
+            iniciarCamera();
+        });
+        
+        btnCapturar.addEventListener('click', () => {
+            if (!video.videoWidth || video.videoWidth === 0) {
+                alert('Aguarde a câmera iniciar completamente!');
+                return;
+            }
+            
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            imagemCapturada = tempCanvas;
+            previewImg.src = tempCanvas.toDataURL('image/jpeg');
+            previewArea.style.display = 'block';
             btnCorrigir.disabled = false;
-        }, 100);
-    });
-    
-    // ============================================
-    // GERENCIAMENTO DE PROVAS (UI)
-    // ============================================
-    
-    function renderizarListaProvas() {
-        const container = document.getElementById('listaProvas');
-        container.innerHTML = '';
-        
-        if (provas.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:20px;">Nenhuma prova criada ainda</div>';
-            return;
-        }
-        
-        provas.forEach(prova => {
-            const div = document.createElement('div');
-            div.className = 'prova-item';
-            div.innerHTML = `
-                <div class="prova-info">
-                    <div class="prova-nome">${prova.nome_prova}</div>
-                    <div class="prova-detalhes">${prova.num_questoes} questões | ${prova.opcoes_por_questao} opções</div>
-                </div>
-                <div class="prova-acoes">
-                    <button class="btn-editar-prova" data-id="${prova.id}">✏️</button>
-                    <button class="btn-excluir-prova" data-id="${prova.id}">🗑️</button>
-                </div>
-            `;
-            div.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('btn-editar-prova') && !e.target.classList.contains('btn-excluir-prova')) {
-                    selecionarProva(prova.id);
-                    document.getElementById('modalProvas').style.display = 'none';
-                    alert(`Prova "${prova.nome_prova}" selecionada!`);
-                }
-            });
-            container.appendChild(div);
+            statusCamera.innerHTML = '✅ Folha capturada! Clique em CORRIGIR';
         });
         
-        document.querySelectorAll('.btn-editar-prova').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const id = btn.dataset.id;
-                const prova = provas.find(p => p.id == id);
-                if (prova) {
-                    document.getElementById('provaNome').value = prova.nome_prova;
-                    document.getElementById('provaNumQuestoes').value = prova.num_questoes;
-                    document.getElementById('provaNumOpcoes').value = prova.opcoes_por_questao;
-                    document.getElementById('modalEditarTitulo').innerHTML = '✏️ Editar Prova';
-                    document.getElementById('modalEditarProva').style.display = 'block';
-                    document.getElementById('modalEditarProva').dataset.editId = id;
-                }
-            });
-        });
-        
-        document.querySelectorAll('.btn-excluir-prova').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const id = btn.dataset.id;
-                if (confirm('Excluir esta prova? Todas as correções associadas também serão excluídas.')) {
-                    await excluirProva(id);
-                    renderizarListaProvas();
-                }
-            });
-        });
-    }
-    
-    document.getElementById('btnGerenciarProvas').addEventListener('click', () => {
-        renderizarListaProvas();
-        document.getElementById('modalProvas').style.display = 'block';
-    });
-    
-    document.getElementById('btnNovaProva').addEventListener('click', () => {
-        document.getElementById('provaNome').value = '';
-        document.getElementById('provaNumQuestoes').value = 50;
-        document.getElementById('provaNumOpcoes').value = 5;
-        document.getElementById('modalEditarTitulo').innerHTML = '📝 Criar Nova Prova';
-        delete document.getElementById('modalEditarProva').dataset.editId;
-        document.getElementById('modalEditarProva').style.display = 'block';
-    });
-    
-    document.getElementById('btnCriarProva').addEventListener('click', async () => {
-        const nome = document.getElementById('provaNome').value.trim();
-        const numQuestoes = parseInt(document.getElementById('provaNumQuestoes').value);
-        const numOpcoes = parseInt(document.getElementById('provaNumOpcoes').value);
-        
-        if (!nome) { alert('Digite um nome para a prova!'); return; }
-        
-        const editId = document.getElementById('modalEditarProva').dataset.editId;
-        
-        const btn = document.getElementById('btnCriarProva');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = 'Salvando...';
-        btn.disabled = true;
-        
-        try {
-            await salvarProva(nome, numQuestoes, numOpcoes, editId);
-            document.getElementById('modalEditarProva').style.display = 'none';
-            alert(`✅ Prova "${nome}" salva com sucesso!`);
-            await carregarProvasDoSupabase();
-        } catch (err) {
-            alert('Erro ao salvar prova: ' + err.message);
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    });
-    
-    document.getElementById('btnFecharProvas').addEventListener('click', () => {
-        document.getElementById('modalProvas').style.display = 'none';
-    });
-    
-    document.getElementById('btnCancelarEdicao').addEventListener('click', () => {
-        document.getElementById('modalEditarProva').style.display = 'none';
-    });
-    
-    // ============================================
-    // MODAL DO GABARITO
-    // ============================================
-    
-    function renderizarModalGabarito() {
-        const container = document.getElementById('gabaritoLista');
-        container.innerHTML = '';
-        
-        for (let i = 0; i < NUM_QUESTOES; i++) {
-            const div = document.createElement('div');
-            div.className = 'gab-item';
-            div.innerHTML = `
-                <label>Q${i+1}</label>
-                <select id="gabSelect_${i}" data-questao="${i}">
-                    ${OPCOES.map(op => `<option value="${op}" ${gabarito[i] === op ? 'selected' : ''}>${op}</option>`).join('')}
-                </select>
-            `;
-            container.appendChild(div);
+        function getPixelBrilho(ctx, x, y) {
+            if (x < 0 || y < 0 || x >= ctx.canvas.width || y >= ctx.canvas.height) return 255;
+            const pixel = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
+            return (pixel[0] + pixel[1] + pixel[2]) / 3;
         }
         
-        for (let i = 0; i < NUM_QUESTOES; i++) {
-            const select = document.getElementById(`gabSelect_${i}`);
-            if (select) {
-                select.addEventListener('change', (e) => {
-                    const questao = parseInt(e.target.dataset.questao);
-                    gabarito[questao] = e.target.value;
+        function analisarPreenchimentoCirculo(ctx, cx, cy, raio) {
+            let pixelsEscuros = 0;
+            let totalPixels = 0;
+            
+            for (let dx = -raio; dx <= raio; dx += Math.max(1, Math.floor(raio / 4))) {
+                for (let dy = -raio; dy <= raio; dy += Math.max(1, Math.floor(raio / 4))) {
+                    if (dx*dx + dy*dy <= raio*raio) {
+                        const brilho = getPixelBrilho(ctx, cx + dx, cy + dy);
+                        totalPixels++;
+                        if (brilho < BRILHO_MAXIMO_PREENCHIDO) {
+                            pixelsEscuros++;
+                        }
+                    }
+                }
+            }
+            
+            if (totalPixels === 0) return false;
+            const percentualPreenchido = pixelsEscuros / totalPixels;
+            return percentualPreenchido > LIMIAR_PREENCHIMENTO;
+        }
+        
+        function detectarRespostasDaImagem(imgCanvas) {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = imgCanvas.width;
+            tempCanvas.height = imgCanvas.height;
+            tempCtx.drawImage(imgCanvas, 0, 0);
+            
+            const largura = tempCanvas.width;
+            const altura = tempCanvas.height;
+            
+            const LINHAS = Math.ceil(Math.sqrt(NUM_QUESTOES));
+            const COLUNAS = Math.ceil(NUM_QUESTOES / LINHAS);
+            
+            const alturaLinha = altura / LINHAS;
+            const larguraColuna = largura / COLUNAS;
+            const raioCirculo = Math.min(alturaLinha, larguraColuna) * 0.12;
+            
+            const posicoesCirculos = [];
+            const espacamento = larguraColuna / (NUM_OPCOES + 1);
+            for (let opt = 0; opt < NUM_OPCOES; opt++) {
+                posicoesCirculos.push({ offsetX: (opt + 1) * espacamento - larguraColuna/2, offsetY: 0 });
+            }
+            
+            const respostas = [];
+            let questoesComPreenchimento = 0;
+            
+            for (let questao = 0; questao < NUM_QUESTOES; questao++) {
+                const linha = Math.floor(questao / COLUNAS);
+                const coluna = questao % COLUNAS;
+                const cellCenterX = (coluna + 0.5) * larguraColuna;
+                const cellCenterY = (linha + 0.5) * alturaLinha;
+                
+                let opcaoEncontrada = -1;
+                
+                for (let opt = 0; opt < NUM_OPCOES; opt++) {
+                    const cx = cellCenterX + posicoesCirculos[opt].offsetX;
+                    const cy = cellCenterY + posicoesCirculos[opt].offsetY;
+                    
+                    if (analisarPreenchimentoCirculo(tempCtx, cx, cy, raioCirculo)) {
+                        opcaoEncontrada = opt;
+                        questoesComPreenchimento++;
+                        break;
+                    }
+                }
+                
+                if (opcaoEncontrada >= 0) {
+                    respostas.push(OPCOES[opcaoEncontrada]);
+                } else {
+                    respostas.push(null);
+                }
+            }
+            
+            debugDiv.innerHTML = `📊 Detectadas: ${questoesComPreenchimento} questões preenchidas de ${NUM_QUESTOES}`;
+            debugDiv.style.display = 'block';
+            
+            return respostas;
+        }
+        
+        btnCorrigir.addEventListener('click', async () => {
+            if (!imagemCapturada) {
+                alert('Capture uma foto primeiro!');
+                return;
+            }
+            if (!provaAtual) {
+                alert('Selecione uma prova primeiro!');
+                return;
+            }
+            
+            btnCorrigir.innerHTML = '🔄 Processando...';
+            btnCorrigir.disabled = true;
+            
+            setTimeout(async () => {
+                try {
+                    const respostasAluno = detectarRespostasDaImagem(imagemCapturada);
+                    
+                    let acertos = 0;
+                    let questoesValidas = 0;
+                    const detalhes = [];
+                    const respostasParaSalvar = [];
+                    
+                    for (let i = 0; i < NUM_QUESTOES; i++) {
+                        const alunoResp = respostasAluno[i];
+                        const correta = gabarito[i];
+                        
+                        if (alunoResp === null) {
+                            detalhes.push({
+                                num: i + 1,
+                                aluno: '○',
+                                gabarito: correta,
+                                certo: false
+                            });
+                            respostasParaSalvar.push(null);
+                        } else {
+                            questoesValidas++;
+                            const certo = (alunoResp === correta);
+                            if (certo) acertos++;
+                            detalhes.push({
+                                num: i + 1,
+                                aluno: alunoResp,
+                                gabarito: correta,
+                                certo: certo
+                            });
+                            respostasParaSalvar.push(alunoResp);
+                        }
+                    }
+                    
+                    const nota = (acertos / NUM_QUESTOES) * 10;
+                    
+                    await salvarCorrecao(acertos, nota, respostasParaSalvar);
+                    
+                    const resultadoPanel = document.getElementById('resultadoPanel');
+                    resultadoPanel.style.display = 'block';
+                    
+                    resultadoPanel.innerHTML = `
+                        <div class="acertos">✅ ${acertos} / ${NUM_QUESTOES}</div>
+                        <div class="nota">🎓 NOTA: ${nota.toFixed(1)}</div>
+                        <div style="text-align:center; padding:8px; background:#333; border-radius:10px; margin:8px 0; font-size:0.8rem;">
+                            ${questoesValidas} questões detectadas | ${NUM_QUESTOES - questoesValidas} não preenchidas
+                        </div>
+                        <div style="text-align:center; margin:5px 0; padding:8px; background:#2c2c2c; border-radius:10px;">
+                            ${nota >= 6 ? '🎉 APROVADO! 🎉' : '📚 RECUPERAÇÃO 📚'}
+                        </div>
+                        <div class="detalhes" id="detalhesGrid"></div>
+                        <button class="btn-novo" id="btnNovaCorrecao">📷 Nova Correção</button>
+                    `;
+                    
+                    const grid = document.getElementById('detalhesGrid');
+                    grid.innerHTML = '';
+                    detalhes.forEach(d => {
+                        const div = document.createElement('div');
+                        div.className = d.certo ? 'item-certo' : 'item-errado';
+                        const alunoShow = d.aluno === '○' ? '⚪' : d.aluno;
+                        div.innerHTML = `<strong>${d.num}</strong><br>${alunoShow}<br><small>(${d.gabarito})</small>`;
+                        grid.appendChild(div);
+                    });
+                    
+                    document.getElementById('btnNovaCorrecao').addEventListener('click', () => {
+                        resultadoPanel.style.display = 'none';
+                        previewArea.style.display = 'none';
+                        imagemCapturada = null;
+                        btnCorrigir.disabled = true;
+                        btnCorrigir.innerHTML = '🔍 Corrigir Prova';
+                        debugDiv.style.display = 'none';
+                    });
+                    
+                } catch (err) {
+                    debugDiv.innerHTML = `Erro: ${err.message}`;
+                    alert('Erro ao processar: ' + err.message);
+                }
+                btnCorrigir.innerHTML = '🔍 Corrigir Prova';
+                btnCorrigir.disabled = false;
+            }, 100);
+        });
+        
+        function renderizarListaProvas() {
+            const container = document.getElementById('listaProvas');
+            container.innerHTML = '';
+            
+            if (provas.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px;">Nenhuma prova criada ainda</div>';
+                return;
+            }
+            
+            provas.forEach(prova => {
+                const div = document.createElement('div');
+                div.className = 'prova-item';
+                div.innerHTML = `
+                    <div class="prova-info">
+                        <div class="prova-nome">${prova.nome_prova}</div>
+                        <div class="prova-detalhes">${prova.num_questoes} questões | ${prova.opcoes_por_questao} opções</div>
+                    </div>
+                    <div class="prova-acoes">
+                        <button class="btn-editar-prova" data-id="${prova.id}">✏️</button>
+                        <button class="btn-excluir-prova" data-id="${prova.id}">🗑️</button>
+                    </div>
+                `;
+                div.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('btn-editar-prova') && !e.target.classList.contains('btn-excluir-prova')) {
+                        selecionarProva(prova.id);
+                        document.getElementById('modalProvas').style.display = 'none';
+                        alert(`Prova "${prova.nome_prova}" selecionada!`);
+                    }
                 });
+                container.appendChild(div);
+            });
+            
+            document.querySelectorAll('.btn-editar-prova').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.id;
+                    const prova = provas.find(p => p.id == id);
+                    if (prova) {
+                        document.getElementById('provaNome').value = prova.nome_prova;
+                        document.getElementById('provaNumQuestoes').value = prova.num_questoes;
+                        document.getElementById('provaNumOpcoes').value = prova.opcoes_por_questao;
+                        document.getElementById('modalEditarTitulo').innerHTML = '✏️ Editar Prova';
+                        document.getElementById('modalEditarProva').style.display = 'block';
+                        document.getElementById('modalEditarProva').dataset.editId = id;
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.btn-excluir-prova').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.id;
+                    if (confirm('Excluir esta prova? Todas as correções associadas também serão excluídas.')) {
+                        await excluirProva(id);
+                        renderizarListaProvas();
+                    }
+                });
+            });
+        }
+        
+        document.getElementById('btnGerenciarProvas').addEventListener('click', () => {
+            renderizarListaProvas();
+            document.getElementById('modalProvas').style.display = 'block';
+        });
+        
+        document.getElementById('btnNovaProva').addEventListener('click', () => {
+            document.getElementById('provaNome').value = '';
+            document.getElementById('provaNumQuestoes').value = 50;
+            document.getElementById('provaNumOpcoes').value = 5;
+            document.getElementById('modalEditarTitulo').innerHTML = '📝 Criar Nova Prova';
+            delete document.getElementById('modalEditarProva').dataset.editId;
+            document.getElementById('modalEditarProva').style.display = 'block';
+        });
+        
+        document.getElementById('btnCriarProva').addEventListener('click', async () => {
+            const nome = document.getElementById('provaNome').value.trim();
+            const numQuestoes = parseInt(document.getElementById('provaNumQuestoes').value);
+            const numOpcoes = parseInt(document.getElementById('provaNumOpcoes').value);
+            
+            if (!nome) { alert('Digite um nome para a prova!'); return; }
+            
+            const editId = document.getElementById('modalEditarProva').dataset.editId;
+            
+            const btn = document.getElementById('btnCriarProva');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Salvando...';
+            btn.disabled = true;
+            
+            try {
+                await salvarProva(nome, numQuestoes, numOpcoes, editId);
+                document.getElementById('modalEditarProva').style.display = 'none';
+                alert(`✅ Prova "${nome}" salva com sucesso!`);
+                await carregarProvasDoSupabase();
+            } catch (err) {
+                alert('Erro ao salvar prova: ' + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+        
+        document.getElementById('btnFecharProvas').addEventListener('click', () => {
+            document.getElementById('modalProvas').style.display = 'none';
+        });
+        
+        document.getElementById('btnCancelarEdicao').addEventListener('click', () => {
+            document.getElementById('modalEditarProva').style.display = 'none';
+        });
+        
+        function renderizarModalGabarito() {
+            const container = document.getElementById('gabaritoLista');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < NUM_QUESTOES; i++) {
+                const div = document.createElement('div');
+                div.className = 'gab-item';
+                div.innerHTML = `
+                    <label>Q${i+1}</label>
+                    <select id="gabSelect_${i}" data-questao="${i}">
+                        ${OPCOES.map(op => `<option value="${op}" ${gabarito[i] === op ? 'selected' : ''}>${op}</option>`).join('')}
+                    </select>
+                `;
+                container.appendChild(div);
+            }
+            
+            for (let i = 0; i < NUM_QUESTOES; i++) {
+                const select = document.getElementById(`gabSelect_${i}`);
+                if (select) {
+                    select.addEventListener('change', (e) => {
+                        const questao = parseInt(e.target.dataset.questao);
+                        gabarito[questao] = e.target.value;
+                    });
+                }
             }
         }
-    }
-    
-    document.getElementById('btnAbrirGabaritoNovo').addEventListener('click', () => {
-        if (!provaAtual) { alert('Selecione uma prova primeiro!'); return; }
-        document.getElementById('modalGabaritoTitulo').innerHTML = `📝 ${provaAtual.nome_prova}`;
-        document.getElementById('infoQuestoes').innerHTML = `${NUM_QUESTOES} questões | ${OPCOES.join(', ')}`;
-        renderizarModalGabarito();
-        document.getElementById('modalGabarito').style.display = 'block';
-    });
-    
-    document.getElementById('btnSalvarGabarito').addEventListener('click', async () => {
-        await salvarGabaritoProvaAtual();
-        document.getElementById('modalGabarito').style.display = 'none';
-    });
-    
-    document.getElementById('btnFecharGabarito').addEventListener('click', () => {
-        document.getElementById('modalGabarito').style.display = 'none';
-    });
-    
-    document.getElementById('btnResetGabarito').addEventListener('click', () => {
-        if (confirm('Resetar todas as respostas do gabarito?')) {
-            gabarito = new Array(NUM_QUESTOES).fill(OPCOES[0]);
+        
+        document.getElementById('btnAbrirGabaritoNovo').addEventListener('click', () => {
+            if (!provaAtual) { alert('Selecione uma prova primeiro!'); return; }
+            document.getElementById('modalGabaritoTitulo').innerHTML = `📝 ${provaAtual.nome_prova}`;
+            document.getElementById('infoQuestoes').innerHTML = `${NUM_QUESTOES} questões | ${OPCOES.join(', ')}`;
             renderizarModalGabarito();
-        }
-    });
-    
-    document.querySelectorAll('.btn-rapido').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const questoes = parseInt(btn.dataset.questoes);
-            document.getElementById('provaNumQuestoes').value = questoes;
+            document.getElementById('modalGabarito').style.display = 'block';
         });
-    });
-    
-    // Fechar modais
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.style.display = 'none';
+        
+        document.getElementById('btnSalvarGabarito').addEventListener('click', async () => {
+            await salvarGabaritoProvaAtual();
+            document.getElementById('modalGabarito').style.display = 'none';
         });
-    });
-    
-    // ============================================
-    // BOTÃO SAIR
-    // ============================================
-    document.getElementById('btnSair').addEventListener('click', (e) => {
-        e.preventDefault();
         
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
+        document.getElementById('btnFecharGabarito').addEventListener('click', () => {
+            document.getElementById('modalGabarito').style.display = 'none';
+        });
+        
+        document.getElementById('btnResetGabarito').addEventListener('click', () => {
+            if (confirm('Resetar todas as respostas do gabarito?')) {
+                gabarito = new Array(NUM_QUESTOES).fill(OPCOES[0]);
+                renderizarModalGabarito();
+            }
+        });
+        
+        document.querySelectorAll('.btn-rapido').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const questoes = parseInt(btn.dataset.questoes);
+                document.getElementById('provaNumQuestoes').value = questoes;
+            });
+        });
+        
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.style.display = 'none';
+            });
+        });
+        
+        document.getElementById('btnSair').addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            
+            localStorage.removeItem('usuario_id');
+            localStorage.removeItem('usuario_nome');
+            localStorage.removeItem('usuario_email');
+            
+            window.location.href = 'index.html';
+        });
+        
+        async function iniciar() {
+            await garantirUsuarioExistente();
+            await carregarProvasDoSupabase();
+            iniciarCamera();
         }
         
-        localStorage.removeItem('usuario_id');
-        localStorage.removeItem('usuario_nome');
-        localStorage.removeItem('usuario_email');
+        iniciar();
         
-        window.location.href = 'index.html';
-    });
-    
-    // ============================================
-    // INICIAR
-    // ============================================
-    async function iniciar() {
-        await carregarProvasDoSupabase();
-        iniciarCamera();
-    }
-    
-    iniciar();
-    
-    window.addEventListener('beforeunload', () => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
-    });
-</script>
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
 </body>
 </html>
