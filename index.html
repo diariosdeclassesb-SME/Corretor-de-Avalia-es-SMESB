@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Corrige Gabarito - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .bg-institucional {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('institucional.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            filter: brightness(0.6);
+            z-index: 0;
+        }
+
+        .bg-institucional::after {
+            content: "PREFEITURA DE SANTA BRANCA";
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 1.2rem;
+            font-weight: bold;
+            letter-spacing: 3px;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .logo-texto {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #1a73e8;
+            line-height: 1.2;
+            margin-bottom: 20px;
+        }
+
+        .logo-sub {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+        }
+
+        .subtitulo {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .links {
+            margin-top: 25px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+
+        .links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        .mensagem {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        .erro {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+            display: block;
+        }
+
+        .sucesso {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.6s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 30px;
+            padding: 30px;
+            max-width: 450px;
+            width: 100%;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+        }
+
+        .btn-cancelar {
+            background: #999;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-institucional"></div>
+    
+    <div class="container">
+        <div class="login-card">
+            <div class="logo-texto">
+                PREFEITURA DE<br>SANTA BRANCA
+                <div class="logo-sub">Sistema de Correção de Gabaritos</div>
+            </div>
+            
+            <h2>Bem-vindo</h2>
+            <div class="subtitulo">Acesse o sistema</div>
+            
+            <form id="loginForm">
+                <div class="input-group">
+                    <label>📧 E-mail</label>
+                    <input type="email" id="email" required placeholder="professor@escola.com">
+                </div>
+                
+                <div class="input-group">
+                    <label>🔒 Senha</label>
+                    <input type="password" id="senha" required placeholder="••••••">
+                </div>
+                
+                <button type="submit" id="btnLogin">Entrar</button>
+            </form>
+            
+            <div class="links">
+                <a id="linkCadastro">📝 Criar conta</a>
+                <a id="linkRecuperar">🔑 Esqueci a senha</a>
+            </div>
+            
+            <div id="mensagem" class="mensagem"></div>
+        </div>
+    </div>
+
+    <div id="modalCadastro" class="modal">
+        <div class="modal-content">
+            <h3>📝 Criar Nova Conta</h3>
+            <input type="text" id="cadNome" placeholder="Nome completo">
+            <input type="email" id="cadEmail" placeholder="E-mail">
+            <input type="password" id="cadSenha" placeholder="Senha">
+            <input type="text" id="cadEscola" placeholder="Escola">
+            <button id="btnCadastrar">Cadastrar</button>
+            <button id="btnFecharModal" class="btn-cancelar">Cancelar</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // ⚠️ COLOQUE SUAS CREDENCIAIS AQUI ⚠️
+        const SUPABASE_URL = 'https://qoqrdlesznppseltfjce.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvcXJkbGVzem5wcHNlbHRmamNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5NzI3ODIsImV4cCI6MjA5NDU0ODc4Mn0.04JLwSEVGOT_nHBy5mf8UiiskCZhkz1UnTGRfqRvmdA';
+        
+        console.log('Iniciando app...');
+        console.log('Supabase disponível?', typeof supabase !== 'undefined');
+        
+        // Verificar se a biblioteca carregou
+        if (typeof supabase === 'undefined') {
+            console.error('Biblioteca Supabase não carregou!');
+            document.getElementById('mensagem').innerHTML = 'Erro ao carregar biblioteca. Recarregue a página.';
+            document.getElementById('mensagem').className = 'mensagem erro';
+            document.getElementById('mensagem').style.display = 'block';
+        }
+        
+        // Inicializar Supabase (usando a variável global 'supabase')
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Testar conexão
+        async function testarConexao() {
+            try {
+                console.log('Testando conexão com Supabase...');
+                const { data, error } = await supabaseClient.from('usuarios').select('id').limit(1);
+                if (error) {
+                    console.error('Erro detalhado:', error);
+                    mostrarMensagem('Erro: ' + error.message, 'erro');
+                    return;
+                }
+                console.log('✅ Conexão com Supabase OK!', data);
+                mostrarMensagem('✅ Conectado ao banco de dados!', 'sucesso');
+                setTimeout(() => {
+                    const msg = document.getElementById('mensagem');
+                    if (msg) msg.style.display = 'none';
+                }, 3000);
+            } catch (err) {
+                console.error('❌ Erro de conexão:', err);
+                mostrarMensagem('Erro de conexão: ' + err.message, 'erro');
+            }
+        }
+        
+        // Elementos
+        const loginForm = document.getElementById('loginForm');
+        const btnLogin = document.getElementById('btnLogin');
+        const mensagemDiv = document.getElementById('mensagem');
+        const linkCadastro = document.getElementById('linkCadastro');
+        const modalCadastro = document.getElementById('modalCadastro');
+        
+        function mostrarMensagem(texto, tipo) {
+            mensagemDiv.textContent = texto;
+            mensagemDiv.className = `mensagem ${tipo}`;
+            mensagemDiv.style.display = 'block';
+            setTimeout(() => {
+                if (mensagemDiv) mensagemDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Verificar se já está logado
+        if (localStorage.getItem('usuario_id')) {
+            window.location.href = 'leitor-gabarito.html';
+        }
+        
+        // LOGIN
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            
+            btnLogin.innerHTML = 'Entrando <span class="loading"></span>';
+            btnLogin.disabled = true;
+            
+            try {
+                console.log('Buscando usuário:', email);
+                
+                const { data, error } = await supabaseClient
+                    .from('usuarios')
+                    .select('*')
+                    .eq('email', email)
+                    .maybeSingle();
+                
+                if (error) {
+                    console.error('Erro na busca:', error);
+                    throw error;
+                }
+                
+                if (!data) {
+                    mostrarMensagem('❌ E-mail não encontrado!', 'erro');
+                    btnLogin.innerHTML = 'Entrar';
+                    btnLogin.disabled = false;
+                    return;
+                }
+                
+                console.log('Usuário encontrado:', data.nome);
+                
+                if (data.senha_hash !== senha) {
+                    mostrarMensagem('❌ Senha incorreta!', 'erro');
+                    btnLogin.innerHTML = 'Entrar';
+                    btnLogin.disabled = false;
+                    return;
+                }
+                
+                // Salvar sessão
+                localStorage.setItem('usuario_id', data.id);
+                localStorage.setItem('usuario_nome', data.nome);
+                localStorage.setItem('usuario_email', data.email);
+                
+                // Atualizar último acesso
+                await supabaseClient
+                    .from('usuarios')
+                    .update({ ultimo_acesso: new Date().toISOString() })
+                    .eq('id', data.id);
+                
+                mostrarMensagem('✅ Login realizado! Redirecionando...', 'sucesso');
+                
+                setTimeout(() => {
+                    window.location.href = 'leitor-gabarito.html';
+                }, 1500);
+                
+            } catch (err) {
+                console.error('Erro detalhado:', err);
+                mostrarMensagem('❌ Erro: ' + err.message, 'erro');
+                btnLogin.innerHTML = 'Entrar';
+                btnLogin.disabled = false;
+            }
+        });
+        
+        // Abrir modal de cadastro
+        if (linkCadastro) {
+            linkCadastro.addEventListener('click', (e) => {
+                e.preventDefault();
+                modalCadastro.style.display = 'flex';
+            });
+        }
+        
+        // Fechar modal
+        const btnFechar = document.getElementById('btnFecharModal');
+        if (btnFechar) {
+            btnFechar.addEventListener('click', () => {
+                modalCadastro.style.display = 'none';
+            });
+        }
+        
+        if (modalCadastro) {
+            modalCadastro.addEventListener('click', (e) => {
+                if (e.target === modalCadastro) {
+                    modalCadastro.style.display = 'none';
+                }
+            });
+        }
+        
+        // CADASTRAR
+        const btnCadastrar = document.getElementById('btnCadastrar');
+        if (btnCadastrar) {
+            btnCadastrar.addEventListener('click', async () => {
+                const nome = document.getElementById('cadNome').value;
+                const email = document.getElementById('cadEmail').value;
+                const senha = document.getElementById('cadSenha').value;
+                const escola = document.getElementById('cadEscola').value;
+                
+                if (!nome || !email || !senha) {
+                    alert('❌ Preencha todos os campos obrigatórios!');
+                    return;
+                }
+                
+                const btnCad = document.getElementById('btnCadastrar');
+                const textoOriginal = btnCad.innerHTML;
+                btnCad.innerHTML = 'Cadastrando <span class="loading"></span>';
+                btnCad.disabled = true;
+                
+                try {
+                    console.log('Verificando se e-mail existe...');
+                    
+                    const { data: existe, error: checkError } = await supabaseClient
+                        .from('usuarios')
+                        .select('id')
+                        .eq('email', email)
+                        .maybeSingle();
+                    
+                    if (existe) {
+                        alert('❌ Este e-mail já está cadastrado!');
+                        btnCad.innerHTML = textoOriginal;
+                        btnCad.disabled = false;
+                        return;
+                    }
+                    
+                    console.log('Inserindo novo usuário...');
+                    
+                    const { error } = await supabaseClient
+                        .from('usuarios')
+                        .insert([{
+                            nome: nome,
+                            email: email,
+                            senha_hash: senha,
+                            escola: escola || null
+                        }]);
+                    
+                    if (error) throw error;
+                    
+                    alert('✅ Cadastro realizado com sucesso! Faça login.');
+                    modalCadastro.style.display = 'none';
+                    
+                    // Limpar campos
+                    document.getElementById('cadNome').value = '';
+                    document.getElementById('cadEmail').value = '';
+                    document.getElementById('cadSenha').value = '';
+                    document.getElementById('cadEscola').value = '';
+                    
+                } catch (err) {
+                    console.error('Erro ao cadastrar:', err);
+                    alert('❌ Erro ao cadastrar: ' + err.message);
+                } finally {
+                    btnCad.innerHTML = textoOriginal;
+                    btnCad.disabled = false;
+                }
+            });
+        }
+        
+        // Recuperar senha
+        const linkRecuperar = document.getElementById('linkRecuperar');
+        if (linkRecuperar) {
+            linkRecuperar.addEventListener('click', (e) => {
+                e.preventDefault();
+                alert('🔐 Entre em contato com o administrador do sistema para recuperar sua senha.');
+            });
+        }
+        
+        // Executar teste de conexão
+        setTimeout(() => {
+            testarConexao();
+        }, 1000);
+    </script>
+</body>
+</html>
