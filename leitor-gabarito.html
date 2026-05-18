@@ -62,17 +62,23 @@
             pointer-events: none;
         }
         
-        /* Marcadores de detecção dos quadrados */
         .marker-dot {
             position: absolute;
-            width: 12px;
-            height: 12px;
+            width: 16px;
+            height: 16px;
             background: #00ff00;
             border: 2px solid #fff;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             box-shadow: 0 0 10px rgba(0,255,0,0.8);
             z-index: 10;
+        }
+        
+        .marker-dot.quadrado {
+            background: #ff6600;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
         }
         
         .guide-box {
@@ -447,18 +453,6 @@
             color: #000;
             font-weight: bold;
         }
-        
-        .contador-marcadores {
-            background: rgba(0,0,0,0.7);
-            padding: 4px 8px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            color: white;
-            z-index: 20;
-        }
     </style>
 </head>
 <body>
@@ -596,19 +590,17 @@
         
         let stream = null;
         let imagemCapturada = null;
-        let marcadoresDetectados = [];
-        let quadradosDetectados = false;
+        let quadradosDetectados = [];
+        let quadradosEncontrados = false;
         
-        // ========== FUNÇÃO PARA DETECTAR QUADRADOS PRETOS ==========
-        function detectarQuadradosPretos(ctx, width, height) {
+        // ========== FUNÇÃO PARA DETECTAR APENAS QUADRADOS GRANDES ==========
+        function detectarQuadradosAlinhamento(ctx, width, height) {
             const imageData = ctx.getImageData(0, 0, width, height);
             const data = imageData.data;
             
-            // Procura por regiões escuras (quadrados pretos)
             const quadrados = [];
             const visitado = new Array(width * height).fill(false);
             
-            // Função para flood fill e encontrar região
             function encontrarRegiao(startX, startY) {
                 const pixels = [];
                 const queue = [{x: startX, y: startY}];
@@ -624,7 +616,8 @@
                     const pixelIdx = idx * 4;
                     const brilho = (data[pixelIdx] + data[pixelIdx+1] + data[pixelIdx+2]) / 3;
                     
-                    if (brilho > 80) continue; // Muito claro, não é quadrado preto
+                    // Quadrados de alinhamento são bem escuros (brilho < 50)
+                    if (brilho > 60) continue;
                     
                     visitado[idx] = true;
                     pixels.push({x, y});
@@ -633,31 +626,31 @@
                     minY = Math.min(minY, y);
                     maxY = Math.max(maxY, y);
                     
-                    // Adiciona vizinhos
                     queue.push({x: x+1, y});
                     queue.push({x: x-1, y});
                     queue.push({x, y: y+1});
                     queue.push({x, y: y-1});
                 }
                 
-                if (pixels.length < 30) return null; // Região muito pequena
+                // Quadrados de alinhamento têm pelo menos 100 pixels
+                if (pixels.length < 80) return null;
                 
                 const largura = maxX - minX;
                 const altura = maxY - minY;
                 const area = pixels.length;
                 const areaEsperada = largura * altura;
                 const proporcaoPreenchida = area / areaEsperada;
+                const proporcaoLados = Math.max(largura, altura) / Math.min(largura, altura);
                 
-                // Verifica se é aproximadamente um quadrado (proporção próxima de 1)
-                const proporcao = Math.max(largura, altura) / Math.min(largura, altura);
-                
-                if (proporcao < 1.5 && proporcaoPreenchida > 0.5 && largura > 10 && altura > 10) {
+                // Verifica se é um quadrado (proporção próxima de 1)
+                if (proporcaoLados < 1.8 && proporcaoPreenchida > 0.4 && largura > 15 && altura > 15) {
                     return {
                         x: (minX + maxX) / 2,
                         y: (minY + maxY) / 2,
                         width: largura,
                         height: altura,
-                        minX, minY, maxX, maxY
+                        minX, minY, maxX, maxY,
+                        area: pixels.length
                     };
                 }
                 
@@ -665,13 +658,13 @@
             }
             
             // Varre a imagem procurando regiões escuras
-            for (let y = 0; y < height; y += 15) {
-                for (let x = 0; x < width; x += 15) {
+            for (let y = 0; y < height; y += 20) {
+                for (let x = 0; x < width; x += 20) {
                     const idx = y * width + x;
                     if (!visitado[idx]) {
                         const pixelIdx = idx * 4;
                         const brilho = (data[pixelIdx] + data[pixelIdx+1] + data[pixelIdx+2]) / 3;
-                        if (brilho < 70) {
+                        if (brilho < 55) {
                             const quadrado = encontrarRegiao(x, y);
                             if (quadrado) {
                                 quadrados.push(quadrado);
@@ -681,65 +674,17 @@
                 }
             }
             
-            // Filtra e ordena os quadrados (esperamos 6 quadrados: 2 em cima, 2 embaixo, 2 nas laterais)
-            // Ordena por Y e depois por X
-            quadrados.sort((a, b) => a.y - b.y);
+            // Filtra por tamanho (quadrados de alinhamento são maiores que os círculos)
+            const tamanhoMedio = quadrados.reduce((sum, q) => sum + q.area, 0) / (quadrados.length || 1);
+            const quadradosGrandes = quadrados.filter(q => q.area > tamanhoMedio * 0.5);
             
-            return quadrados;
-        }
-        
-        // ========== FUNÇÃO PARA CORRIGIR PERSPECTIVA ==========
-        function corrigirPerspectiva(imgCanvas, quadrados) {
-            if (quadrados.length < 4) return imgCanvas;
+            // Ordena por posição
+            quadradosGrandes.sort((a, b) => {
+                if (Math.abs(a.y - b.y) < 50) return a.x - b.x;
+                return a.y - b.y;
+            });
             
-            // Encontra os 4 cantos (superior esquerdo, superior direito, inferior direito, inferior esquerdo)
-            let superiorEsquerdo = quadrados[0];
-            let superiorDireito = quadrados[0];
-            let inferiorEsquerdo = quadrados[0];
-            let inferiorDireito = quadrados[0];
-            
-            for (const q of quadrados) {
-                if (q.x + q.y < superiorEsquerdo.x + superiorEsquerdo.y) superiorEsquerdo = q;
-                if (q.x - q.y > superiorDireito.x - superiorDireito.y) superiorDireito = q;
-                if (q.x + q.y > inferiorDireito.x + inferiorDireito.y) inferiorDireito = q;
-                if (q.x - q.y < inferiorEsquerdo.x - inferiorEsquerdo.y) inferiorEsquerdo = q;
-            }
-            
-            // Pontos originais
-            const srcPoints = [
-                [superiorEsquerdo.minX, superiorEsquerdo.minY],
-                [superiorDireito.maxX, superiorDireito.minY],
-                [inferiorDireito.maxX, inferiorDireito.maxY],
-                [inferiorEsquerdo.minX, inferiorEsquerdo.maxY]
-            ];
-            
-            // Tamanho alvo (mantém proporção)
-            const larguraAlvo = Math.max(
-                Math.hypot(srcPoints[1][0] - srcPoints[0][0], srcPoints[1][1] - srcPoints[0][1]),
-                Math.hypot(srcPoints[2][0] - srcPoints[3][0], srcPoints[2][1] - srcPoints[3][1])
-            );
-            const alturaAlvo = Math.max(
-                Math.hypot(srcPoints[3][0] - srcPoints[0][0], srcPoints[3][1] - srcPoints[0][1]),
-                Math.hypot(srcPoints[2][0] - srcPoints[1][0], srcPoints[2][1] - srcPoints[1][1])
-            );
-            
-            const destPoints = [
-                [0, 0],
-                [larguraAlvo, 0],
-                [larguraAlvo, alturaAlvo],
-                [0, alturaAlvo]
-            ];
-            
-            // Aplica correção de perspectiva
-            const resultCanvas = document.createElement('canvas');
-            resultCanvas.width = larguraAlvo;
-            resultCanvas.height = alturaAlvo;
-            const resultCtx = resultCanvas.getContext('2d');
-            
-            // Desenha a imagem corrigida
-            resultCtx.drawImage(imgCanvas, 0, 0);
-            
-            return resultCanvas;
+            return quadradosGrandes;
         }
         
         // ========== FUNÇÕES SUPABASE ==========
@@ -1039,7 +984,7 @@
                 canvas.height = video.videoHeight;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                const quadrados = detectarQuadradosPretos(ctx, canvas.width, canvas.height);
+                const quadrados = detectarQuadradosAlinhamento(ctx, canvas.width, canvas.height);
                 
                 // Limpa overlay
                 alignmentOverlay.innerHTML = '';
@@ -1049,10 +994,10 @@
                     const scaleX = videoRect.width / canvas.width;
                     const scaleY = videoRect.height / canvas.height;
                     
-                    // Desenha marcadores para cada quadrado detectado
+                    // Desenha marcadores laranjas para os quadrados de alinhamento
                     for (const q of quadrados) {
                         const dot = document.createElement('div');
-                        dot.className = 'marker-dot';
+                        dot.className = 'marker-dot quadrado';
                         dot.style.left = `${q.x * scaleX}px`;
                         dot.style.top = `${q.y * scaleY}px`;
                         alignmentOverlay.appendChild(dot);
@@ -1074,18 +1019,17 @@
                     alignmentOverlay.appendChild(guideDiv);
                     
                     if (quadrados.length >= 5) {
-                        quadradosDetectados = true;
+                        quadradosEncontrados = true;
+                        quadradosDetectados = quadrados;
                         statusAlinhamento.innerHTML = `✅ ${quadrados.length}/6 quadrados detectados! Pronto para capturar`;
                         statusAlinhamento.className = 'status-alinhamento good';
                     } else {
-                        quadradosDetectados = false;
+                        quadradosEncontrados = false;
                         statusAlinhamento.innerHTML = `🟡 ${quadrados.length}/6 quadrados detectados. Ajuste a folha`;
                         statusAlinhamento.className = 'status-alinhamento';
                     }
-                    
-                    marcadoresDetectados = quadrados;
                 } else {
-                    quadradosDetectados = false;
+                    quadradosEncontrados = false;
                     statusAlinhamento.innerHTML = `🔴 ${quadrados.length}/6 quadrados detectados. Posicione a folha corretamente`;
                     statusAlinhamento.className = 'status-alinhamento bad';
                 }
@@ -1097,8 +1041,8 @@
         }
         
         function capturarImagem() {
-            if (!quadradosDetectados) {
-                alert('Posicione a folha para detectar os 6 quadrados pretos primeiro!');
+            if (!quadradosEncontrados) {
+                alert('Posicione a folha para detectar os quadrados pretos primeiro!');
                 return;
             }
             
@@ -1118,12 +1062,12 @@
             statusAlinhamento.innerHTML = '✅ Imagem capturada! Clique em CORRIGIR';
         }
         
-        // ========== DETECÇÃO DE RESPOSTAS ==========
+        // ========== DETECÇÃO DE RESPOSTAS (ignorando os quadrados) ==========
         function detectarRespostasDaImagem(imgCanvas) {
             console.log('🔍 Iniciando detecção de respostas...');
             
             // Redimensiona
-            const targetWidth = 1000;
+            const targetWidth = 1200;
             const scale = targetWidth / imgCanvas.width;
             const targetHeight = Math.floor(imgCanvas.height * scale);
             
@@ -1148,7 +1092,7 @@
             for (let i = 0; i < data.length; i += 4) {
                 let brilho = (data[i] + data[i+1] + data[i+2]) / 3;
                 if (brilho < limiarEscuro) {
-                    brilho = Math.max(0, brilho * 0.3);
+                    brilho = Math.max(0, brilho * 0.2);
                 } else {
                     brilho = Math.min(255, brilho * 1.5);
                 }
@@ -1156,13 +1100,15 @@
             }
             ctx.putImageData(imageData, 0, 0);
             
-            // Calcula grade
+            // Calcula grade baseada na quantidade de questões
             const COLUNAS = Math.ceil(Math.sqrt(NUM_QUESTOES));
             const LINHAS = Math.ceil(NUM_QUESTOES / COLUNAS);
             
             const cellWidth = targetWidth / COLUNAS;
             const cellHeight = targetHeight / LINHAS;
-            const circleRadius = Math.min(cellWidth, cellHeight) * 0.12;
+            
+            // Raio do círculo (bem menor que os quadrados de alinhamento)
+            const circleRadius = Math.min(cellWidth, cellHeight) * 0.1;
             const optionsSpacing = cellWidth / (NUM_OPCOES + 1);
             
             const respostas = [];
@@ -1172,6 +1118,7 @@
             debugMsg.push(`📊 Brilho médio: ${brilhoMedio.toFixed(1)} | Limiar: ${limiarEscuro.toFixed(1)}`);
             debugMsg.push(`📐 Dimensão: ${targetWidth}x${targetHeight}`);
             debugMsg.push(`📋 Grade: ${LINHAS} linhas x ${COLUNAS} colunas`);
+            debugMsg.push(`🔘 Raio círculo: ${circleRadius.toFixed(1)}px`);
             
             for (let questao = 0; questao < NUM_QUESTOES; questao++) {
                 const linha = Math.floor(questao / COLUNAS);
@@ -1182,7 +1129,7 @@
                 
                 let melhorOpcao = -1;
                 let maiorPreenchimento = 0;
-                let totalPreenchimentos = 0;
+                let opcoesPreenchidas = [];
                 
                 for (let opt = 0; opt < NUM_OPCOES; opt++) {
                     const circleX = cellCenterX - cellWidth/2 + (opt + 1) * optionsSpacing;
@@ -1211,8 +1158,8 @@
                     
                     const proporcao = totalPixels > 0 ? pixelsEscuros / totalPixels : 0;
                     
-                    if (proporcao > 0.25) {
-                        totalPreenchimentos++;
+                    if (proporcao > 0.3) {
+                        opcoesPreenchidas.push(opt);
                         if (proporcao > maiorPreenchimento) {
                             maiorPreenchimento = proporcao;
                             melhorOpcao = opt;
@@ -1220,15 +1167,24 @@
                     }
                 }
                 
-                if (melhorOpcao >= 0 && totalPreenchimentos === 1) {
+                // Só aceita se tiver exatamente UMA opção preenchida
+                if (melhorOpcao >= 0 && opcoesPreenchidas.length === 1) {
                     respostas.push(OPCOES[melhorOpcao]);
                     questoesDetectadas++;
+                    if (questao < 20) {
+                        debugMsg.push(`✅ Q${questao+1}: ${OPCOES[melhorOpcao]} (${(maiorPreenchimento*100).toFixed(0)}%)`);
+                    }
                 } else {
                     respostas.push(null);
+                    if (questao < 20 && opcoesPreenchidas.length > 1) {
+                        debugMsg.push(`⚠️ Q${questao+1}: múltiplas opções (${opcoesPreenchidas.length})`);
+                    } else if (questao < 20) {
+                        debugMsg.push(`❌ Q${questao+1}: nenhuma opção detectada`);
+                    }
                 }
             }
             
-            debugMsg.push(`\n📊 TOTAL DETECTADO: ${questoesDetectadas}/${NUM_QUESTOES}`);
+            debugMsg.push(`\n📊 TOTAL DETECTADO: ${questoesDetectadas}/${NUM_QUESTOES} (${(questoesDetectadas/NUM_QUESTOES*100).toFixed(1)}%)`);
             
             const debugDiv = document.getElementById('debugInfo');
             debugDiv.innerHTML = debugMsg.join('<br>');
