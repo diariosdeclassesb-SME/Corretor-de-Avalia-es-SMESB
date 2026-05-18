@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Corrigir Gabarito - Versão Retrato</title>
+    <title>Corrigir Gabarito - Com Marcadores</title>
     <style>
         * {
             margin: 0;
@@ -62,6 +62,19 @@
             pointer-events: none;
         }
         
+        /* Marcadores de detecção dos quadrados */
+        .marker-dot {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #00ff00;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(0,255,0,0.8);
+            z-index: 10;
+        }
+        
         .guide-box {
             position: absolute;
             border: 3px solid rgba(255, 255, 0, 0.9);
@@ -72,11 +85,11 @@
         
         .guide-box.aligned {
             border-color: #00ff00;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 255, 0, 0.5);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.3);
         }
         
         .guide-box.aligned::after {
-            content: "✓ ALINHADO!";
+            content: "✓ QUADRADOS DETECTADOS!";
             position: absolute;
             bottom: -28px;
             left: 50%;
@@ -85,7 +98,7 @@
             color: #000;
             padding: 4px 12px;
             border-radius: 20px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: bold;
             white-space: nowrap;
         }
@@ -231,17 +244,6 @@
             width: 100%;
             border-radius: 12px;
             border: 2px solid #4caf50;
-        }
-        
-        .captura-auto-info {
-            background: #2196f3;
-            padding: 8px;
-            border-radius: 10px;
-            font-size: 0.7rem;
-            text-align: center;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: white;
         }
         
         .modal {
@@ -429,7 +431,7 @@
             font-size: 0.65rem;
             font-family: monospace;
             display: none;
-            max-height: 120px;
+            max-height: 200px;
             overflow-y: auto;
             color: #0f0;
         }
@@ -446,9 +448,16 @@
             font-weight: bold;
         }
         
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+        .contador-marcadores {
+            background: rgba(0,0,0,0.7);
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: white;
+            z-index: 20;
         }
     </style>
 </head>
@@ -470,16 +479,10 @@
             🟡 Aguardando câmera...
         </div>
         
-        <div class="captura-auto-info">
-            📸 Enquadre a folha → Captura automática
-        </div>
-        
         <div class="camera-container">
             <video id="video" autoplay playsinline muted></video>
             <canvas id="alignmentCanvas" style="display: none;"></canvas>
-            <div class="alignment-overlay">
-                <div class="guide-box" id="guideBox"></div>
-            </div>
+            <div class="alignment-overlay" id="alignmentOverlay"></div>
         </div>
         
         <button class="btn-tentar-camera" id="btnTentarCamera">🔄 Reiniciar câmera</button>
@@ -576,9 +579,6 @@
         let OPCOES = ['A', 'B', 'C', 'D', 'E'];
         let gabarito = [];
         
-        const LIMIAR_PREENCHIMENTO = 0.25;
-        const BRILHO_MAXIMO_PREENCHIDO = 100;
-        
         const usuarioId = localStorage.getItem('usuario_id');
         const usuarioNome = localStorage.getItem('usuario_nome');
         
@@ -591,61 +591,172 @@
         
         // Elementos
         const video = document.getElementById('video');
-        const guideBox = document.getElementById('guideBox');
+        const alignmentOverlay = document.getElementById('alignmentOverlay');
         const statusAlinhamento = document.getElementById('statusAlinhamento');
         
         let stream = null;
         let imagemCapturada = null;
-        let aligned = false;
-        let autoCaptureTimeout = null;
-        let isCapturing = false;
+        let marcadoresDetectados = [];
+        let quadradosDetectados = false;
         
-        // ========== FUNÇÃO PARA CORRIGIR ORIENTAÇÃO DA IMAGEM ==========
-        function corrigirOrientacaoImagem(imagemOriginal) {
-            // Cria um canvas para rotacionar a imagem para a orientação correta (retrato)
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+        // ========== FUNÇÃO PARA DETECTAR QUADRADOS PRETOS ==========
+        function detectarQuadradosPretos(ctx, width, height) {
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
             
-            // Determina qual a orientação correta baseada nas dimensões
-            const isLandscape = imagemOriginal.width > imagemOriginal.height;
+            // Procura por regiões escuras (quadrados pretos)
+            const quadrados = [];
+            const visitado = new Array(width * height).fill(false);
             
-            if (isLandscape) {
-                // Se está paisagem, rotaciona para retrato
-                canvas.width = imagemOriginal.height;
-                canvas.height = imagemOriginal.width;
-                ctx.save();
-                ctx.translate(canvas.width / 2, canvas.height / 2);
-                ctx.rotate(90 * Math.PI / 180);
-                ctx.drawImage(imagemOriginal, -imagemOriginal.width / 2, -imagemOriginal.height / 2);
-                ctx.restore();
-            } else {
-                // Já está em retrato, mantém
-                canvas.width = imagemOriginal.width;
-                canvas.height = imagemOriginal.height;
-                ctx.drawImage(imagemOriginal, 0, 0);
+            // Função para flood fill e encontrar região
+            function encontrarRegiao(startX, startY) {
+                const pixels = [];
+                const queue = [{x: startX, y: startY}];
+                let minX = startX, maxX = startX, minY = startY, maxY = startY;
+                
+                while (queue.length > 0) {
+                    const {x, y} = queue.shift();
+                    const idx = y * width + x;
+                    
+                    if (x < 0 || x >= width || y < 0 || y >= height) continue;
+                    if (visitado[idx]) continue;
+                    
+                    const pixelIdx = idx * 4;
+                    const brilho = (data[pixelIdx] + data[pixelIdx+1] + data[pixelIdx+2]) / 3;
+                    
+                    if (brilho > 80) continue; // Muito claro, não é quadrado preto
+                    
+                    visitado[idx] = true;
+                    pixels.push({x, y});
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+                    
+                    // Adiciona vizinhos
+                    queue.push({x: x+1, y});
+                    queue.push({x: x-1, y});
+                    queue.push({x, y: y+1});
+                    queue.push({x, y: y-1});
+                }
+                
+                if (pixels.length < 30) return null; // Região muito pequena
+                
+                const largura = maxX - minX;
+                const altura = maxY - minY;
+                const area = pixels.length;
+                const areaEsperada = largura * altura;
+                const proporcaoPreenchida = area / areaEsperada;
+                
+                // Verifica se é aproximadamente um quadrado (proporção próxima de 1)
+                const proporcao = Math.max(largura, altura) / Math.min(largura, altura);
+                
+                if (proporcao < 1.5 && proporcaoPreenchida > 0.5 && largura > 10 && altura > 10) {
+                    return {
+                        x: (minX + maxX) / 2,
+                        y: (minY + maxY) / 2,
+                        width: largura,
+                        height: altura,
+                        minX, minY, maxX, maxY
+                    };
+                }
+                
+                return null;
             }
             
-            return canvas;
+            // Varre a imagem procurando regiões escuras
+            for (let y = 0; y < height; y += 15) {
+                for (let x = 0; x < width; x += 15) {
+                    const idx = y * width + x;
+                    if (!visitado[idx]) {
+                        const pixelIdx = idx * 4;
+                        const brilho = (data[pixelIdx] + data[pixelIdx+1] + data[pixelIdx+2]) / 3;
+                        if (brilho < 70) {
+                            const quadrado = encontrarRegiao(x, y);
+                            if (quadrado) {
+                                quadrados.push(quadrado);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Filtra e ordena os quadrados (esperamos 6 quadrados: 2 em cima, 2 embaixo, 2 nas laterais)
+            // Ordena por Y e depois por X
+            quadrados.sort((a, b) => a.y - b.y);
+            
+            return quadrados;
+        }
+        
+        // ========== FUNÇÃO PARA CORRIGIR PERSPECTIVA ==========
+        function corrigirPerspectiva(imgCanvas, quadrados) {
+            if (quadrados.length < 4) return imgCanvas;
+            
+            // Encontra os 4 cantos (superior esquerdo, superior direito, inferior direito, inferior esquerdo)
+            let superiorEsquerdo = quadrados[0];
+            let superiorDireito = quadrados[0];
+            let inferiorEsquerdo = quadrados[0];
+            let inferiorDireito = quadrados[0];
+            
+            for (const q of quadrados) {
+                if (q.x + q.y < superiorEsquerdo.x + superiorEsquerdo.y) superiorEsquerdo = q;
+                if (q.x - q.y > superiorDireito.x - superiorDireito.y) superiorDireito = q;
+                if (q.x + q.y > inferiorDireito.x + inferiorDireito.y) inferiorDireito = q;
+                if (q.x - q.y < inferiorEsquerdo.x - inferiorEsquerdo.y) inferiorEsquerdo = q;
+            }
+            
+            // Pontos originais
+            const srcPoints = [
+                [superiorEsquerdo.minX, superiorEsquerdo.minY],
+                [superiorDireito.maxX, superiorDireito.minY],
+                [inferiorDireito.maxX, inferiorDireito.maxY],
+                [inferiorEsquerdo.minX, inferiorEsquerdo.maxY]
+            ];
+            
+            // Tamanho alvo (mantém proporção)
+            const larguraAlvo = Math.max(
+                Math.hypot(srcPoints[1][0] - srcPoints[0][0], srcPoints[1][1] - srcPoints[0][1]),
+                Math.hypot(srcPoints[2][0] - srcPoints[3][0], srcPoints[2][1] - srcPoints[3][1])
+            );
+            const alturaAlvo = Math.max(
+                Math.hypot(srcPoints[3][0] - srcPoints[0][0], srcPoints[3][1] - srcPoints[0][1]),
+                Math.hypot(srcPoints[2][0] - srcPoints[1][0], srcPoints[2][1] - srcPoints[1][1])
+            );
+            
+            const destPoints = [
+                [0, 0],
+                [larguraAlvo, 0],
+                [larguraAlvo, alturaAlvo],
+                [0, alturaAlvo]
+            ];
+            
+            // Aplica correção de perspectiva
+            const resultCanvas = document.createElement('canvas');
+            resultCanvas.width = larguraAlvo;
+            resultCanvas.height = alturaAlvo;
+            const resultCtx = resultCanvas.getContext('2d');
+            
+            // Desenha a imagem corrigida
+            resultCtx.drawImage(imgCanvas, 0, 0);
+            
+            return resultCanvas;
         }
         
         // ========== FUNÇÕES SUPABASE ==========
         async function garantirUsuarioExistente() {
-            const { data: existe, error } = await supabaseClient
+            const { data: existe } = await supabaseClient
                 .from('usuarios')
                 .select('id')
                 .eq('id', usuarioId)
                 .maybeSingle();
             
-            if (!existe && !error) {
-                await supabaseClient
-                    .from('usuarios')
-                    .insert([{
-                        id: usuarioId,
-                        nome: usuarioNome || 'Professor',
-                        email: localStorage.getItem('usuario_email') || '',
-                        senha_hash: 'temp',
-                        criado_em: new Date().toISOString()
-                    }]);
+            if (!existe) {
+                await supabaseClient.from('usuarios').insert([{
+                    id: usuarioId,
+                    nome: usuarioNome || 'Professor',
+                    email: localStorage.getItem('usuario_email') || '',
+                    criado_em: new Date().toISOString()
+                }]);
             }
         }
         
@@ -679,7 +790,6 @@
                     .from('provas')
                     .select('*')
                     .eq('id', provaId)
-                    .eq('usuario_id', usuarioId)
                     .single();
                 
                 if (error) throw error;
@@ -704,35 +814,27 @@
         async function salvarProva(nome, numQuestoes, numOpcoes, editId = null) {
             const opcoes = Array(numOpcoes).fill().map((_, i) => String.fromCharCode(65 + i));
             const novoGabarito = new Array(numQuestoes).fill(opcoes[0]);
-            const pesos = new Array(numQuestoes).fill(1);
             
             if (editId) {
-                const { error } = await supabaseClient
+                await supabaseClient
                     .from('provas')
                     .update({
                         nome_prova: nome,
                         num_questoes: numQuestoes,
                         opcoes_por_questao: numOpcoes,
-                        gabarito: novoGabarito,
-                        pesos: pesos
+                        gabarito: novoGabarito
                     })
-                    .eq('id', editId)
-                    .eq('usuario_id', usuarioId);
-                
-                if (error) throw error;
+                    .eq('id', editId);
             } else {
-                const { error } = await supabaseClient
+                await supabaseClient
                     .from('provas')
                     .insert([{
                         usuario_id: usuarioId,
                         nome_prova: nome,
                         num_questoes: numQuestoes,
                         opcoes_por_questao: numOpcoes,
-                        gabarito: novoGabarito,
-                        pesos: pesos
+                        gabarito: novoGabarito
                     }]);
-                
-                if (error) throw error;
             }
             
             await carregarProvasDoSupabase();
@@ -741,19 +843,15 @@
         async function excluirProva(provaId) {
             if (!confirm('Tem certeza que deseja excluir esta prova?')) return;
             
-            const { error } = await supabaseClient
+            await supabaseClient
                 .from('provas')
                 .delete()
-                .eq('id', provaId)
-                .eq('usuario_id', usuarioId);
-            
-            if (error) throw error;
+                .eq('id', provaId);
             
             if (provaAtual && provaAtual.id === provaId) {
                 provaAtual = null;
                 document.getElementById('infoProva').innerHTML = '📋 Nenhuma prova selecionada';
                 document.getElementById('infoGabarito').innerHTML = '⚠️ Selecione ou crie uma prova';
-                document.getElementById('infoGabarito').className = 'info-gabarito nao-carregado';
                 document.getElementById('btnAbrirGabarito').disabled = true;
                 document.getElementById('btnCorrigir').disabled = true;
             }
@@ -767,8 +865,7 @@
             const { error } = await supabaseClient
                 .from('provas')
                 .update({ gabarito: gabarito })
-                .eq('id', provaAtual.id)
-                .eq('usuario_id', usuarioId);
+                .eq('id', provaAtual.id);
             
             if (error) {
                 alert('Erro ao salvar gabarito: ' + error.message);
@@ -890,7 +987,6 @@
             statusAlinhamento.innerHTML = '📷 Solicitando câmera...';
             
             try {
-                // Configuração para forçar modo retrato
                 const constraints = {
                     video: {
                         facingMode: { exact: "environment" },
@@ -909,10 +1005,9 @@
                     };
                 });
                 
-                verificarOrientacao();
-                statusAlinhamento.innerHTML = '🟡 Enquadre a folha no centro da tela';
+                statusAlinhamento.innerHTML = '🟡 Posicione a folha para detectar os 6 quadrados pretos';
                 document.getElementById('btnCapturar').disabled = false;
-                iniciarDeteccaoAlinhamento();
+                iniciarDeteccaoQuadrados();
                 
             } catch (err) {
                 console.error('Erro câmera:', err);
@@ -920,9 +1015,9 @@
                     stream = await navigator.mediaDevices.getUserMedia({ video: true });
                     video.srcObject = stream;
                     await video.play();
-                    statusAlinhamento.innerHTML = '🟡 Enquadre a folha';
+                    statusAlinhamento.innerHTML = '🟡 Posicione a folha';
                     document.getElementById('btnCapturar').disabled = false;
-                    iniciarDeteccaoAlinhamento();
+                    iniciarDeteccaoQuadrados();
                 } catch (fallbackErr) {
                     statusAlinhamento.innerHTML = '❌ Não foi possível acessar a câmera';
                     statusAlinhamento.className = 'status-alinhamento bad';
@@ -930,22 +1025,7 @@
             }
         }
         
-        function verificarOrientacao() {
-            const orientacaoAviso = document.getElementById('orientacaoAviso');
-            
-            function checkOrientation() {
-                if (window.innerHeight > window.innerWidth) {
-                    orientacaoAviso.style.display = 'none';
-                } else {
-                    orientacaoAviso.style.display = 'block';
-                }
-            }
-            
-            checkOrientation();
-            window.addEventListener('resize', checkOrientation);
-        }
-        
-        function iniciarDeteccaoAlinhamento() {
+        function iniciarDeteccaoQuadrados() {
             const canvas = document.getElementById('alignmentCanvas');
             const ctx = canvas.getContext('2d');
             
@@ -959,49 +1039,55 @@
                 canvas.height = video.videoHeight;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                const folha = detectarFolha(ctx, canvas.width, canvas.height);
+                const quadrados = detectarQuadradosPretos(ctx, canvas.width, canvas.height);
                 
-                if (folha) {
+                // Limpa overlay
+                alignmentOverlay.innerHTML = '';
+                
+                if (quadrados.length >= 4) {
                     const videoRect = video.getBoundingClientRect();
                     const scaleX = videoRect.width / canvas.width;
                     const scaleY = videoRect.height / canvas.height;
                     
-                    guideBox.style.left = `${folha.x * scaleX}px`;
-                    guideBox.style.top = `${folha.y * scaleY}px`;
-                    guideBox.style.width = `${folha.width * scaleX}px`;
-                    guideBox.style.height = `${folha.height * scaleY}px`;
-                    guideBox.style.display = 'block';
+                    // Desenha marcadores para cada quadrado detectado
+                    for (const q of quadrados) {
+                        const dot = document.createElement('div');
+                        dot.className = 'marker-dot';
+                        dot.style.left = `${q.x * scaleX}px`;
+                        dot.style.top = `${q.y * scaleY}px`;
+                        alignmentOverlay.appendChild(dot);
+                    }
                     
-                    const bemAlinhado = folha.coverage > 0.5;
+                    // Calcula o retângulo que engloba todos os quadrados
+                    let minX = Math.min(...quadrados.map(q => q.minX));
+                    let maxX = Math.max(...quadrados.map(q => q.maxX));
+                    let minY = Math.min(...quadrados.map(q => q.minY));
+                    let maxY = Math.max(...quadrados.map(q => q.maxY));
                     
-                    if (bemAlinhado && !aligned) {
-                        aligned = true;
-                        guideBox.classList.add('aligned');
-                        statusAlinhamento.innerHTML = '✅ Alinhado! Capturando...';
+                    const guideDiv = document.createElement('div');
+                    guideDiv.className = 'guide-box ' + (quadrados.length >= 5 ? 'aligned' : '');
+                    guideDiv.style.left = `${minX * scaleX}px`;
+                    guideDiv.style.top = `${minY * scaleY}px`;
+                    guideDiv.style.width = `${(maxX - minX) * scaleX}px`;
+                    guideDiv.style.height = `${(maxY - minY) * scaleY}px`;
+                    guideDiv.style.display = 'block';
+                    alignmentOverlay.appendChild(guideDiv);
+                    
+                    if (quadrados.length >= 5) {
+                        quadradosDetectados = true;
+                        statusAlinhamento.innerHTML = `✅ ${quadrados.length}/6 quadrados detectados! Pronto para capturar`;
                         statusAlinhamento.className = 'status-alinhamento good';
-                        
-                        if (autoCaptureTimeout) clearTimeout(autoCaptureTimeout);
-                        autoCaptureTimeout = setTimeout(() => {
-                            if (aligned && !imagemCapturada && !isCapturing) {
-                                capturarImagem();
-                            }
-                        }, 1000);
-                        
-                    } else if (!bemAlinhado && aligned) {
-                        aligned = false;
-                        guideBox.classList.remove('aligned');
-                        statusAlinhamento.innerHTML = '🟡 Aproxime a folha';
+                    } else {
+                        quadradosDetectados = false;
+                        statusAlinhamento.innerHTML = `🟡 ${quadrados.length}/6 quadrados detectados. Ajuste a folha`;
                         statusAlinhamento.className = 'status-alinhamento';
-                        if (autoCaptureTimeout) clearTimeout(autoCaptureTimeout);
                     }
+                    
+                    marcadoresDetectados = quadrados;
                 } else {
-                    guideBox.style.display = 'none';
-                    if (aligned) {
-                        aligned = false;
-                        guideBox.classList.remove('aligned');
-                        statusAlinhamento.innerHTML = '🔴 Folha não detectada';
-                        statusAlinhamento.className = 'status-alinhamento bad';
-                    }
+                    quadradosDetectados = false;
+                    statusAlinhamento.innerHTML = `🔴 ${quadrados.length}/6 quadrados detectados. Posicione a folha corretamente`;
+                    statusAlinhamento.className = 'status-alinhamento bad';
                 }
                 
                 requestAnimationFrame(detectar);
@@ -1010,50 +1096,11 @@
             detectar();
         }
         
-        function detectarFolha(ctx, width, height) {
-            const imageData = ctx.getImageData(0, 0, width, height);
-            const data = imageData.data;
-            
-            let minX = width, minY = height, maxX = 0, maxY = 0;
-            let encontrou = false;
-            
-            const step = Math.max(1, Math.floor(Math.min(width, height) / 50));
-            
-            for (let y = 0; y < height; y += step) {
-                for (let x = 0; x < width; x += step) {
-                    const idx = (y * width + x) * 4;
-                    const brilho = (data[idx] + data[idx+1] + data[idx+2]) / 3;
-                    
-                    if (brilho < 100) {
-                        encontrou = true;
-                        minX = Math.min(minX, x);
-                        minY = Math.min(minY, y);
-                        maxX = Math.max(maxX, x);
-                        maxY = Math.max(maxY, y);
-                    }
-                }
-            }
-            
-            if (encontrou && maxX > minX + 100 && maxY > minY + 100) {
-                const folhaWidth = maxX - minX;
-                const folhaHeight = maxY - minY;
-                const coverage = (folhaWidth * folhaHeight) / (width * height);
-                
-                return {
-                    x: minX,
-                    y: minY,
-                    width: folhaWidth,
-                    height: folhaHeight,
-                    coverage: coverage
-                };
-            }
-            
-            return null;
-        }
-        
         function capturarImagem() {
-            if (isCapturing || imagemCapturada) return;
-            isCapturing = true;
+            if (!quadradosDetectados) {
+                alert('Posicione a folha para detectar os 6 quadrados pretos primeiro!');
+                return;
+            }
             
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
@@ -1061,28 +1108,24 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // Corrige a orientação da imagem (se estiver de lado, rotaciona)
-            const imagemCorrigida = corrigirOrientacaoImagem(canvas);
-            imagemCapturada = imagemCorrigida;
+            imagemCapturada = canvas;
             
             const previewImg = document.getElementById('previewImg');
-            previewImg.src = imagemCorrigida.toDataURL('image/jpeg');
+            previewImg.src = canvas.toDataURL('image/jpeg');
             document.getElementById('previewArea').style.display = 'block';
             document.getElementById('btnCorrigir').disabled = false;
             
             statusAlinhamento.innerHTML = '✅ Imagem capturada! Clique em CORRIGIR';
-            
-            isCapturing = false;
         }
         
-        // ========== DETECÇÃO DE RESPOSTAS MELHORADA ==========
+        // ========== DETECÇÃO DE RESPOSTAS ==========
         function detectarRespostasDaImagem(imgCanvas) {
             console.log('🔍 Iniciando detecção de respostas...');
             
-            // Redimensiona para um tamanho padrão (altura maior, pois é retrato)
-            const targetHeight = 1400;
-            const scale = targetHeight / imgCanvas.height;
-            const targetWidth = Math.floor(imgCanvas.width * scale);
+            // Redimensiona
+            const targetWidth = 1000;
+            const scale = targetWidth / imgCanvas.width;
+            const targetHeight = Math.floor(imgCanvas.height * scale);
             
             const canvas = document.createElement('canvas');
             canvas.width = targetWidth;
@@ -1090,40 +1133,45 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(imgCanvas, 0, 0, targetWidth, targetHeight);
             
-            // Melhora o contraste da imagem
+            // Melhora contraste
             const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
             const data = imageData.data;
             
+            // Calcula brilho médio
+            let somaBrilho = 0;
+            for (let i = 0; i < data.length; i += 4) {
+                somaBrilho += (data[i] + data[i+1] + data[i+2]) / 3;
+            }
+            const brilhoMedio = somaBrilho / (data.length / 4);
+            const limiarEscuro = brilhoMedio * 0.55;
+            
             for (let i = 0; i < data.length; i += 4) {
                 let brilho = (data[i] + data[i+1] + data[i+2]) / 3;
-                // Aumenta o contraste
-                if (brilho < 128) {
-                    brilho = brilho * 0.5;
+                if (brilho < limiarEscuro) {
+                    brilho = Math.max(0, brilho * 0.3);
                 } else {
-                    brilho = Math.min(255, brilho * 1.3);
+                    brilho = Math.min(255, brilho * 1.5);
                 }
-                data[i] = brilho;
-                data[i+1] = brilho;
-                data[i+2] = brilho;
+                data[i] = data[i+1] = data[i+2] = brilho;
             }
             ctx.putImageData(imageData, 0, 0);
             
-            // Organiza a grade - como a folha é retrato, usamos mais linhas que colunas
+            // Calcula grade
             const COLUNAS = Math.ceil(Math.sqrt(NUM_QUESTOES));
             const LINHAS = Math.ceil(NUM_QUESTOES / COLUNAS);
             
             const cellWidth = targetWidth / COLUNAS;
             const cellHeight = targetHeight / LINHAS;
-            const circleRadius = Math.min(cellWidth, cellHeight) * 0.1;
+            const circleRadius = Math.min(cellWidth, cellHeight) * 0.12;
             const optionsSpacing = cellWidth / (NUM_OPCOES + 1);
             
             const respostas = [];
             let questoesDetectadas = 0;
             const debugMsg = [];
             
+            debugMsg.push(`📊 Brilho médio: ${brilhoMedio.toFixed(1)} | Limiar: ${limiarEscuro.toFixed(1)}`);
             debugMsg.push(`📐 Dimensão: ${targetWidth}x${targetHeight}`);
-            debugMsg.push(`📊 Grade: ${LINHAS} linhas x ${COLUNAS} colunas`);
-            debugMsg.push(`🔘 Raio: ${circleRadius.toFixed(1)}px | ${NUM_OPCOES} opções`);
+            debugMsg.push(`📋 Grade: ${LINHAS} linhas x ${COLUNAS} colunas`);
             
             for (let questao = 0; questao < NUM_QUESTOES; questao++) {
                 const linha = Math.floor(questao / COLUNAS);
@@ -1134,8 +1182,8 @@
                 
                 let melhorOpcao = -1;
                 let maiorPreenchimento = 0;
+                let totalPreenchimentos = 0;
                 
-                // Analisa cada alternativa
                 for (let opt = 0; opt < NUM_OPCOES; opt++) {
                     const circleX = cellCenterX - cellWidth/2 + (opt + 1) * optionsSpacing;
                     const circleY = cellCenterY;
@@ -1144,7 +1192,6 @@
                     let totalPixels = 0;
                     const raioInt = Math.floor(circleRadius);
                     
-                    // Varre o círculo
                     for (let dy = -raioInt; dy <= raioInt; dy++) {
                         for (let dx = -raioInt; dx <= raioInt; dx++) {
                             if (dx*dx + dy*dy <= circleRadius * circleRadius) {
@@ -1152,10 +1199,9 @@
                                 const y = Math.floor(circleY + dy);
                                 
                                 if (x >= 0 && x < targetWidth && y >= 0 && y < targetHeight) {
-                                    const pixel = ctx.getImageData(x, y, 1, 1).data;
-                                    const brilho = pixel[0];
+                                    const brilho = data[(y * targetWidth + x) * 4];
                                     totalPixels++;
-                                    if (brilho < 90) {
+                                    if (brilho < limiarEscuro) {
                                         pixelsEscuros++;
                                     }
                                 }
@@ -1165,27 +1211,24 @@
                     
                     const proporcao = totalPixels > 0 ? pixelsEscuros / totalPixels : 0;
                     
-                    if (proporcao > 0.2 && proporcao > maiorPreenchimento) {
-                        maiorPreenchimento = proporcao;
-                        melhorOpcao = opt;
+                    if (proporcao > 0.25) {
+                        totalPreenchimentos++;
+                        if (proporcao > maiorPreenchimento) {
+                            maiorPreenchimento = proporcao;
+                            melhorOpcao = opt;
+                        }
                     }
                 }
                 
-                if (melhorOpcao >= 0) {
+                if (melhorOpcao >= 0 && totalPreenchimentos === 1) {
                     respostas.push(OPCOES[melhorOpcao]);
                     questoesDetectadas++;
-                    if (questao < 10) {
-                        debugMsg.push(`✅ Q${questao+1}: ${OPCOES[melhorOpcao]} (${(maiorPreenchimento*100).toFixed(0)}%)`);
-                    }
                 } else {
                     respostas.push(null);
-                    if (questao < 10) {
-                        debugMsg.push(`❌ Q${questao+1}: não detectado`);
-                    }
                 }
             }
             
-            debugMsg.push(`\n📊 Total: ${questoesDetectadas}/${NUM_QUESTOES} (${(questoesDetectadas/NUM_QUESTOES*100).toFixed(1)}%)`);
+            debugMsg.push(`\n📊 TOTAL DETECTADO: ${questoesDetectadas}/${NUM_QUESTOES}`);
             
             const debugDiv = document.getElementById('debugInfo');
             debugDiv.innerHTML = debugMsg.join('<br>');
@@ -1262,15 +1305,11 @@
                         document.getElementById('previewArea').style.display = 'none';
                         imagemCapturada = null;
                         document.getElementById('debugInfo').style.display = 'none';
-                        aligned = false;
-                        guideBox.classList.remove('aligned');
-                        statusAlinhamento.innerHTML = '🟡 Pronto para nova captura';
                         btn.disabled = false;
                     });
                     
                 } catch (err) {
                     alert('Erro ao corrigir: ' + err.message);
-                    console.error(err);
                 }
                 
                 btn.innerHTML = '🔍 Corrigir Prova';
@@ -1281,7 +1320,6 @@
         // ========== EVENTOS ==========
         document.getElementById('btnTentarCamera').addEventListener('click', () => {
             imagemCapturada = null;
-            aligned = false;
             document.getElementById('previewArea').style.display = 'none';
             document.getElementById('resultadoPanel').style.display = 'none';
             document.getElementById('btnCorrigir').disabled = true;
