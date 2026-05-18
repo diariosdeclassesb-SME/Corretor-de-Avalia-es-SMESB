@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Corrigir Gabarito - Leitura de Círculos</title>
+    <title>Corrigir Gabarito - Grade 10x5</title>
     <style>
         * {
             margin: 0;
@@ -513,6 +513,10 @@
         let OPCOES = ['A', 'B', 'C', 'D', 'E'];
         let gabarito = [];
         
+        // Configuração fixa da grade - 10 LINHAS e 5 COLUNAS de questões
+        const LINHAS_QUESTOES = 10;
+        const COLUNAS_QUESTOES = 5;
+        
         const usuarioId = localStorage.getItem('usuario_id');
         const usuarioNome = localStorage.getItem('usuario_nome');
         
@@ -797,7 +801,7 @@
                 statusAlinhamento.innerHTML = '🟡 Enquadre a folha e clique em CAPTURAR';
                 document.getElementById('btnCapturar').disabled = false;
                 
-                // Apenas um guia simples na tela
+                // Guia simples na tela
                 setTimeout(() => {
                     const videoRect = video.getBoundingClientRect();
                     guideBox.style.left = `${videoRect.width * 0.1}px`;
@@ -839,12 +843,12 @@
             statusAlinhamento.className = 'status-alinhamento good';
         }
         
-        // ========== DETECÇÃO DE RESPOSTAS - FOCADO APENAS NOS CÍRCULOS ==========
+        // ========== DETECÇÃO DE RESPOSTAS COM GRADE FIXA 10x5 ==========
         function detectarRespostasDaImagem(imgCanvas) {
-            console.log('🔍 Iniciando detecção de círculos preenchidos...');
+            console.log('🔍 Iniciando detecção - Grade 10 linhas x 5 colunas');
             
             // Redimensiona para um tamanho padrão
-            const targetWidth = 1000;
+            const targetWidth = 1200;
             const scale = targetWidth / imgCanvas.width;
             const targetHeight = Math.floor(imgCanvas.height * scale);
             
@@ -864,32 +868,29 @@
                 somaBrilho += (data[i] + data[i+1] + data[i+2]) / 3;
             }
             const brilhoMedio = somaBrilho / (data.length / 4);
-            
-            // Limiar adaptativo para detectar pixels escuros (círculos preenchidos)
             const limiarEscuro = Math.min(brilhoMedio * 0.5, 90);
             
-            // Aplica filtro para melhorar contraste
+            // Binariza a imagem (preto para círculos, branco para fundo)
             for (let i = 0; i < data.length; i += 4) {
                 let brilho = (data[i] + data[i+1] + data[i+2]) / 3;
-                // Escurece ainda mais os pixels escuros
                 if (brilho < limiarEscuro) {
-                    brilho = 0;
+                    data[i] = data[i+1] = data[i+2] = 0; // Preto
                 } else {
-                    brilho = 255;
+                    data[i] = data[i+1] = data[i+2] = 255; // Branco
                 }
-                data[i] = data[i+1] = data[i+2] = brilho;
             }
             ctx.putImageData(imageData, 0, 0);
             
-            // Calcula a grade para as questões
-            const COLUNAS = Math.ceil(Math.sqrt(NUM_QUESTOES));
-            const LINHAS = Math.ceil(NUM_QUESTOES / COLUNAS);
+            // Configuração da grade: 10 linhas de questões, 5 colunas de questões
+            const LINHAS = LINHAS_QUESTOES;  // 10 linhas
+            const COLUNAS = COLUNAS_QUESTOES; // 5 colunas
             
             const cellWidth = targetWidth / COLUNAS;
             const cellHeight = targetHeight / LINHAS;
             
-            // Raio do círculo (aproximadamente 10-15% da célula)
-            const circleRadius = Math.min(cellWidth, cellHeight) * 0.12;
+            // Raio do círculo (cerca de 10% da célula)
+            const circleRadius = Math.min(cellWidth, cellHeight) * 0.1;
+            // Espaçamento entre as alternativas dentro da questão
             const optionsSpacing = cellWidth / (NUM_OPCOES + 1);
             
             const respostas = [];
@@ -898,79 +899,87 @@
             
             debugMsg.push(`📊 Brilho médio: ${brilhoMedio.toFixed(1)} | Limiar: ${limiarEscuro.toFixed(1)}`);
             debugMsg.push(`📐 Dimensão: ${targetWidth}x${targetHeight}`);
-            debugMsg.push(`📋 Grade: ${LINHAS} linhas x ${COLUNAS} colunas`);
+            debugMsg.push(`📋 Grade: ${LINHAS} linhas x ${COLUNAS} colunas (${NUM_QUESTOES} questões)`);
             debugMsg.push(`🔘 Raio do círculo: ${circleRadius.toFixed(1)}px`);
             debugMsg.push(`📌 ${NUM_OPCOES} opções por questão: ${OPCOES.join(', ')}`);
             debugMsg.push(`---`);
             
-            for (let questao = 0; questao < NUM_QUESTOES; questao++) {
-                const linha = Math.floor(questao / COLUNAS);
-                const coluna = questao % COLUNAS;
-                
-                const cellCenterX = (coluna + 0.5) * cellWidth;
-                const cellCenterY = (linha + 0.5) * cellHeight;
-                
-                let melhorOpcao = -1;
-                let maiorPreenchimento = 0;
-                let totalPreenchidas = 0;
-                
-                for (let opt = 0; opt < NUM_OPCOES; opt++) {
-                    // Posição do círculo da alternativa
-                    const circleX = cellCenterX - cellWidth/2 + (opt + 1) * optionsSpacing;
-                    const circleY = cellCenterY;
+            let questaoIndex = 0;
+            
+            for (let linha = 0; linha < LINHAS; linha++) {
+                for (let coluna = 0; coluna < COLUNAS; coluna++) {
+                    if (questaoIndex >= NUM_QUESTOES) break;
                     
-                    let pixelsEscuros = 0;
-                    let totalPixels = 0;
-                    const raioInt = Math.floor(circleRadius);
+                    // Centro da célula da questão
+                    const cellCenterX = (coluna + 0.5) * cellWidth;
+                    const cellCenterY = (linha + 0.5) * cellHeight;
                     
-                    // Varre os pixels dentro do círculo
-                    for (let dy = -raioInt; dy <= raioInt; dy++) {
-                        for (let dx = -raioInt; dx <= raioInt; dx++) {
-                            if (dx*dx + dy*dy <= circleRadius * circleRadius) {
-                                const x = Math.floor(circleX + dx);
-                                const y = Math.floor(circleY + dy);
-                                
-                                if (x >= 0 && x < targetWidth && y >= 0 && y < targetHeight) {
-                                    const brilho = data[(y * targetWidth + x) * 4];
-                                    totalPixels++;
-                                    if (brilho === 0) { // Pixel escuro (preenchido)
-                                        pixelsEscuros++;
+                    let melhorOpcao = -1;
+                    let maiorPreenchimento = 0;
+                    let totalPreenchidas = 0;
+                    
+                    // Analisa cada alternativa (A, B, C, D, E...)
+                    for (let opt = 0; opt < NUM_OPCOES; opt++) {
+                        // Posição do círculo da alternativa
+                        const circleX = cellCenterX - cellWidth/2 + (opt + 1) * optionsSpacing;
+                        const circleY = cellCenterY;
+                        
+                        let pixelsEscuros = 0;
+                        let totalPixels = 0;
+                        const raioInt = Math.floor(circleRadius);
+                        
+                        // Varre os pixels dentro do círculo
+                        for (let dy = -raioInt; dy <= raioInt; dy++) {
+                            for (let dx = -raioInt; dx <= raioInt; dx++) {
+                                if (dx*dx + dy*dy <= circleRadius * circleRadius) {
+                                    const x = Math.floor(circleX + dx);
+                                    const y = Math.floor(circleY + dy);
+                                    
+                                    if (x >= 0 && x < targetWidth && y >= 0 && y < targetHeight) {
+                                        const isPreto = data[(y * targetWidth + x) * 4] === 0;
+                                        totalPixels++;
+                                        if (isPreto) {
+                                            pixelsEscuros++;
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                    
-                    const proporcaoPreenchida = totalPixels > 0 ? pixelsEscuros / totalPixels : 0;
-                    
-                    // Considera preenchido se mais de 20% do círculo estiver escuro
-                    if (proporcaoPreenchida > 0.20) {
-                        totalPreenchidas++;
-                        if (proporcaoPreenchida > maiorPreenchimento) {
-                            maiorPreenchimento = proporcaoPreenchida;
-                            melhorOpcao = opt;
+                        
+                        const proporcaoPreenchida = totalPixels > 0 ? pixelsEscuros / totalPixels : 0;
+                        
+                        // Considera preenchido se mais de 25% do círculo estiver preto
+                        if (proporcaoPreenchida > 0.25) {
+                            totalPreenchidas++;
+                            if (proporcaoPreenchida > maiorPreenchimento) {
+                                maiorPreenchimento = proporcaoPreenchida;
+                                melhorOpcao = opt;
+                            }
                         }
                     }
+                    
+                    // Regra: só aceita se tiver exatamente UMA alternativa preenchida
+                    if (melhorOpcao >= 0 && totalPreenchidas === 1) {
+                        respostas.push(OPCOES[melhorOpcao]);
+                        questoesDetectadas++;
+                        if (questaoIndex < 30) {
+                            debugMsg.push(`✅ Q${questaoIndex+1} (L${linha+1}C${coluna+1}): ${OPCOES[melhorOpcao]} (${(maiorPreenchimento*100).toFixed(0)}% preenchido)`);
+                        }
+                    } else if (totalPreenchidas > 1) {
+                        respostas.push(null);
+                        if (questaoIndex < 30) {
+                            debugMsg.push(`⚠️ Q${questaoIndex+1}: MÚLTIPLAS opções (${totalPreenchidas}) - IGNORADO`);
+                        }
+                    } else {
+                        respostas.push(null);
+                        if (questaoIndex < 30) {
+                            debugMsg.push(`❌ Q${questaoIndex+1}: nenhuma opção detectada`);
+                        }
+                    }
+                    
+                    questaoIndex++;
                 }
-                
-                // Regra: só aceita se tiver exatamente UMA alternativa preenchida
-                if (melhorOpcao >= 0 && totalPreenchidas === 1) {
-                    respostas.push(OPCOES[melhorOpcao]);
-                    questoesDetectadas++;
-                    if (questao < 20) {
-                        debugMsg.push(`✅ Q${questao+1}: ${OPCOES[melhorOpcao]} (${(maiorPreenchimento*100).toFixed(0)}% preenchido)`);
-                    }
-                } else if (totalPreenchidas > 1) {
-                    respostas.push(null);
-                    if (questao < 20) {
-                        debugMsg.push(`⚠️ Q${questao+1}: MÚLTIPLAS opções (${totalPreenchidas}) - IGNORADO`);
-                    }
-                } else {
-                    respostas.push(null);
-                    if (questao < 20) {
-                        debugMsg.push(`❌ Q${questao+1}: nenhuma opção detectada`);
-                    }
-                }
+                if (questaoIndex >= NUM_QUESTOES) break;
             }
             
             debugMsg.push(`---`);
