@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Corrigir Gabarito</title>
+    <title>Corrigir Gabarito - Com Alinhamento Visual</title>
     <style>
         * {
             margin: 0;
@@ -14,42 +14,14 @@
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
             min-height: 100vh;
-            position: relative;
+            background: #000;
             padding: 12px;
         }
         
-        .bg-institucional {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-image: url('institucional.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            filter: brightness(0.7);
-            z-index: 0;
-        }
-        
-        .bg-institucional::after {
-            content: "PREFEITURA DE SANTA BRANCA";
-            position: absolute;
-            bottom: 30px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            color: rgba(255,255,255,0.4);
-            font-size: 1rem;
-            font-weight: bold;
-            letter-spacing: 3px;
-        }
-        
         .container {
-            position: relative;
-            z-index: 1;
             max-width: 600px;
             margin: auto;
+            position: relative;
         }
         
         .header {
@@ -67,15 +39,12 @@
         }
         
         .camera-container {
+            position: relative;
             background: #000;
             border-radius: 20px;
             overflow: hidden;
             aspect-ratio: 4 / 3;
             margin-bottom: 12px;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             border: 2px solid rgba(255,255,255,0.2);
         }
@@ -86,8 +55,64 @@
             object-fit: cover;
         }
         
-        canvas {
+        /* Overlay de alinhamento */
+        .alignment-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+        
+        .guide-box {
+            position: absolute;
+            border: 3px solid rgba(255, 255, 0, 0.8);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            transition: all 0.1s ease;
             display: none;
+        }
+        
+        .guide-box.aligned {
+            border-color: #00ff00;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+        
+        .guide-box.aligned::after {
+            content: "✓ ALINHADO!";
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #00ff00;
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+            animation: pulse 0.5s ease;
+        }
+        
+        .status-alinhamento {
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        .status-alinhamento.good {
+            background: rgba(0, 100, 0, 0.9);
+            color: #00ff00;
+        }
+        
+        .status-alinhamento.bad {
+            background: rgba(139, 26, 26, 0.9);
+            color: #ffaaaa;
         }
         
         button {
@@ -100,7 +125,6 @@
             margin: 5px 0;
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         
         button:active {
@@ -114,7 +138,7 @@
         }
         
         .btn-foto {
-            background: #ff6b35;
+            background: #07b323;
             color: white;
         }
         
@@ -124,7 +148,7 @@
         }
         
         .btn-gabarito {
-            background: #9c27b0;
+            background: #4362ec;
             color: white;
         }
         
@@ -139,7 +163,7 @@
         }
         
         .btn-tentar-camera {
-            background: #ff9800;
+            background: #ffee00;
             margin-top: 5px;
             font-size: 0.85rem;
         }
@@ -193,45 +217,14 @@
         }
         
         .info-usuario {
-            background: rgba(44, 44, 44, 0.95);
+            background: rgba(179, 177, 177, 0.95);
             backdrop-filter: blur(10px);
             padding: 10px;
             border-radius: 12px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             font-size: 0.85rem;
             text-align: center;
             border: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .status-camera {
-            background: rgba(51, 51, 51, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 8px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            font-size: 0.75rem;
-            text-align: center;
-        }
-        
-        .status-camera.erro {
-            background: rgba(139, 26, 26, 0.95);
-            color: #ffaaaa;
-        }
-        
-        .status-camera.sucesso {
-            background: rgba(27, 94, 27, 0.95);
-            color: #a5d6a7;
-        }
-        
-        .preview-area {
-            margin-top: 10px;
-            display: none;
-        }
-        
-        .preview-area img {
-            width: 100%;
-            border-radius: 12px;
-            border: 2px solid #4caf50;
         }
         
         .info-prova {
@@ -239,7 +232,7 @@
             padding: 10px;
             border-radius: 12px;
             text-align: center;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             font-size: 0.85rem;
             font-weight: bold;
         }
@@ -248,7 +241,7 @@
             padding: 8px;
             border-radius: 10px;
             text-align: center;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             font-size: 0.8rem;
         }
         
@@ -267,6 +260,27 @@
         
         .row-buttons button {
             flex: 1;
+        }
+        
+        .preview-area {
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .preview-area img {
+            width: 100%;
+            border-radius: 12px;
+            border: 2px solid #4caf50;
+        }
+        
+        .captura-auto-info {
+            background: #2196f3;
+            padding: 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            text-align: center;
+            margin-bottom: 8px;
+            font-weight: bold;
         }
         
         .modal {
@@ -462,9 +476,16 @@
             padding: 8px;
             border-radius: 8px;
             margin-top: 10px;
-            font-size: 0.65rem;
+            font-size: 0.7rem;
             font-family: monospace;
             display: none;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.05); }
         }
         
         .loading {
@@ -485,8 +506,6 @@
     </style>
 </head>
 <body>
-    <div class="bg-institucional"></div>
-    
     <div class="container">
         <div class="header">
             <h1>📸 Leitor de Gabarito</h1>
@@ -504,12 +523,20 @@
             ⚠️ Selecione ou crie uma prova
         </div>
         
-        <div class="status-camera" id="statusCamera">
-            ⚠️ Iniciando câmera...
+        <div class="status-alinhamento" id="statusAlinhamento">
+            🟡 Aguardando câmera...
+        </div>
+        
+        <div class="captura-auto-info">
+            📸 Alinhe a folha dentro do quadrado → Captura automática após 1 segundo alinhado
         </div>
         
         <div class="camera-container">
             <video id="video" autoplay playsinline muted></video>
+            <canvas id="alignmentCanvas" style="display: none;"></canvas>
+            <div class="alignment-overlay" id="alignmentOverlay">
+                <div class="guide-box" id="guideBox"></div>
+            </div>
         </div>
         
         <button class="btn-tentar-camera" id="btnTentarCamera">🔄 Tentar reiniciar câmera</button>
@@ -520,10 +547,10 @@
         
         <div class="row-buttons">
             <button class="btn-provas" id="btnGerenciarProvas">📚 Provas</button>
-            <button class="btn-foto" id="btnCapturar" disabled>📷 Capturar</button>
+            <button class="btn-foto" id="btnCapturar" disabled>📷 Capturar Manual</button>
         </div>
         
-        <button class="btn-gabarito" id="btnAbrirGabaritoNovo" disabled>📝 Editar Gabarito</button>
+        <button class="btn-gabarito" id="btnAbrirGabarito" disabled>📝 Editar Gabarito</button>
         <button class="btn-corrigir" id="btnCorrigir" disabled>🔍 Corrigir Prova</button>
         <button class="btn-sair" id="btnSair">🚪 Sair</button>
         
@@ -592,11 +619,13 @@
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // ========== CONFIGURAÇÕES SUPABASE ==========
         const SUPABASE_URL = 'https://jmxtiaauezblgkichekx.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpteHRpYWF1ZXpibGdraWNoZWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDIyNjIsImV4cCI6MjA5NDYxODI2Mn0.jD0KRpdl85Cee24qwmV9nDNntR2Wk48DlJLcJnxoTyg';
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
+        // ========== VARIÁVEIS GLOBAIS ==========
         let provas = [];
         let provaAtual = null;
         let NUM_QUESTOES = 50;
@@ -617,6 +646,28 @@
         
         document.getElementById('infoUsuario').innerHTML = `👨‍🏫 Olá, ${usuarioNome || 'Professor'}!`;
         
+        // ========== ELEMENTOS DE ALINHAMENTO ==========
+        const video = document.getElementById('video');
+        const alignmentCanvas = document.getElementById('alignmentCanvas');
+        const guideBox = document.getElementById('guideBox');
+        const statusAlinhamento = document.getElementById('statusAlinhamento');
+        
+        let stream = null;
+        let imagemCapturada = null;
+        let aligned = false;
+        let autoCaptureTimeout = null;
+        let isCapturing = false;
+        
+        // Configurações de alinhamento
+        const ALIGNMENT_CONFIG = {
+            expectedAspectRatio: 0.73,
+            tolerance: 0.15,
+            minCoverage: 0.35,
+            maxCoverage: 0.95,
+            darkThreshold: 80
+        };
+        
+        // ========== FUNÇÕES SUPABASE ==========
         async function garantirUsuarioExistente() {
             const { data: existe, error } = await supabaseClient
                 .from('usuarios')
@@ -625,7 +676,6 @@
                 .maybeSingle();
             
             if (!existe && !error) {
-                console.log('Usuário não encontrado na tabela, criando...');
                 await supabaseClient
                     .from('usuarios')
                     .insert([{
@@ -704,8 +754,8 @@
                 document.getElementById('infoProva').innerHTML = `📋 ${provaAtual.nome_prova} (${NUM_QUESTOES} questões)`;
                 document.getElementById('infoGabarito').innerHTML = `✅ Gabarito carregado!`;
                 document.getElementById('infoGabarito').className = 'info-gabarito carregado';
-                
-                document.getElementById('btnAbrirGabaritoNovo').disabled = false;
+                document.getElementById('btnAbrirGabarito').disabled = false;
+                document.getElementById('btnCorrigir').disabled = !imagemCapturada;
             } catch (err) {
                 console.error('Erro ao selecionar prova:', err);
             }
@@ -763,7 +813,8 @@
                 document.getElementById('infoProva').innerHTML = '📋 Nenhuma prova selecionada';
                 document.getElementById('infoGabarito').innerHTML = '⚠️ Selecione ou crie uma prova';
                 document.getElementById('infoGabarito').className = 'info-gabarito nao-carregado';
-                document.getElementById('btnAbrirGabaritoNovo').disabled = true;
+                document.getElementById('btnAbrirGabarito').disabled = true;
+                document.getElementById('btnCorrigir').disabled = true;
             }
             
             await carregarProvasDoSupabase();
@@ -823,25 +874,14 @@
             }
         }
         
-        const video = document.getElementById('video');
-        const btnCapturar = document.getElementById('btnCapturar');
-        const btnCorrigir = document.getElementById('btnCorrigir');
-        const btnTentarCamera = document.getElementById('btnTentarCamera');
-        const statusCamera = document.getElementById('statusCamera');
-        const previewArea = document.getElementById('previewArea');
-        const previewImg = document.getElementById('previewImg');
-        const debugDiv = document.getElementById('debugInfo');
-        
-        let stream = null;
-        let imagemCapturada = null;
-        
+        // ========== FUNÇÕES DE CÂMERA E ALINHAMENTO ==========
         async function iniciarCamera() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
             
-            statusCamera.innerHTML = '📷 Solicitando permissão da câmera...';
-            statusCamera.className = 'status-camera';
+            statusAlinhamento.innerHTML = '📷 Solicitando permissão da câmera...';
+            statusAlinhamento.className = 'status-alinhamento';
             
             try {
                 const constraints = {
@@ -856,9 +896,10 @@
                 video.srcObject = stream;
                 await video.play();
                 
-                statusCamera.innerHTML = '✅ Câmera pronta! Enquadre a folha';
-                statusCamera.className = 'status-camera sucesso';
-                btnCapturar.disabled = false;
+                statusAlinhamento.innerHTML = '🟡 Alinhe a folha dentro do quadrado amarelo';
+                statusAlinhamento.className = 'status-alinhamento';
+                document.getElementById('btnCapturar').disabled = false;
+                iniciarDeteccaoAlinhamento();
                 
             } catch (err) {
                 console.error('Erro câmera:', err);
@@ -869,27 +910,162 @@
                     video.srcObject = stream;
                     await video.play();
                     
-                    statusCamera.innerHTML = '✅ Câmera pronta! (modo alternativo)';
-                    statusCamera.className = 'status-camera sucesso';
-                    btnCapturar.disabled = false;
+                    statusAlinhamento.innerHTML = '🟡 Alinhe a folha (modo alternativo)';
+                    statusAlinhamento.className = 'status-alinhamento';
+                    document.getElementById('btnCapturar').disabled = false;
+                    iniciarDeteccaoAlinhamento();
                     
                 } catch (fallbackErr) {
-                    statusCamera.innerHTML = '❌ Não foi possível acessar a câmera. Verifique as permissões.';
-                    statusCamera.className = 'status-camera erro';
-                    btnCapturar.disabled = true;
+                    statusAlinhamento.innerHTML = '❌ Não foi possível acessar a câmera. Verifique as permissões.';
+                    statusAlinhamento.className = 'status-alinhamento bad';
+                    document.getElementById('btnCapturar').disabled = true;
                 }
             }
         }
         
-        btnTentarCamera.addEventListener('click', () => {
-            iniciarCamera();
-        });
-        
-        btnCapturar.addEventListener('click', () => {
-            if (!video.videoWidth || video.videoWidth === 0) {
-                alert('Aguarde a câmera iniciar completamente!');
-                return;
+        function iniciarDeteccaoAlinhamento() {
+            const ctx = alignmentCanvas.getContext('2d');
+            let animationId;
+            
+            function detectarAlinhamento() {
+                if (!video.videoWidth || video.videoWidth === 0) {
+                    animationId = requestAnimationFrame(detectarAlinhamento);
+                    return;
+                }
+                
+                alignmentCanvas.width = video.videoWidth;
+                alignmentCanvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, alignmentCanvas.width, alignmentCanvas.height);
+                
+                const folhaInfo = detectarFolha(ctx, alignmentCanvas.width, alignmentCanvas.height);
+                
+                if (folhaInfo) {
+                    const containerRect = document.querySelector('.camera-container').getBoundingClientRect();
+                    const videoRect = video.getBoundingClientRect();
+                    
+                    const scaleX = videoRect.width / alignmentCanvas.width;
+                    const scaleY = videoRect.height / alignmentCanvas.height;
+                    
+                    const left = folhaInfo.x * scaleX;
+                    const top = folhaInfo.y * scaleY;
+                    const width = folhaInfo.width * scaleX;
+                    const height = folhaInfo.height * scaleY;
+                    
+                    guideBox.style.left = `${left}px`;
+                    guideBox.style.top = `${top}px`;
+                    guideBox.style.width = `${width}px`;
+                    guideBox.style.height = `${height}px`;
+                    guideBox.style.display = 'block';
+                    
+                    const isWellAligned = verificarAlinhamento(folhaInfo);
+                    
+                    if (isWellAligned && !aligned) {
+                        aligned = true;
+                        guideBox.classList.add('aligned');
+                        statusAlinhamento.innerHTML = '✅ PERFEITO! Mantenha a posição...';
+                        statusAlinhamento.className = 'status-alinhamento good';
+                        
+                        if (autoCaptureTimeout) clearTimeout(autoCaptureTimeout);
+                        autoCaptureTimeout = setTimeout(() => {
+                            if (aligned && !isCapturing && !imagemCapturada) {
+                                capturarImagemAutomatica();
+                            }
+                        }, 1000);
+                        
+                    } else if (!isWellAligned && aligned) {
+                        aligned = false;
+                        guideBox.classList.remove('aligned');
+                        statusAlinhamento.innerHTML = '🟡 Ajuste a posição da folha';
+                        statusAlinhamento.className = 'status-alinhamento';
+                        if (autoCaptureTimeout) {
+                            clearTimeout(autoCaptureTimeout);
+                            autoCaptureTimeout = null;
+                        }
+                    }
+                    
+                } else {
+                    guideBox.style.display = 'none';
+                    if (aligned) {
+                        aligned = false;
+                        guideBox.classList.remove('aligned');
+                        statusAlinhamento.innerHTML = '🔴 Folha não detectada. Aponte para a folha';
+                        statusAlinhamento.className = 'status-alinhamento bad';
+                    }
+                }
+                
+                animationId = requestAnimationFrame(detectarAlinhamento);
             }
+            
+            detectarAlinhamento();
+        }
+        
+        function detectarFolha(ctx, width, height) {
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            
+            let bordasEncontradas = {
+                top: height,
+                bottom: 0,
+                left: width,
+                right: 0
+            };
+            
+            const step = Math.max(1, Math.floor(Math.min(width, height) / 80));
+            
+            for (let y = 0; y < height; y += step) {
+                for (let x = 0; x < width; x += step) {
+                    const idx = (y * width + x) * 4;
+                    const brilho = (data[idx] + data[idx+1] + data[idx+2]) / 3;
+                    
+                    if (brilho < ALIGNMENT_CONFIG.darkThreshold) {
+                        bordasEncontradas.top = Math.min(bordasEncontradas.top, y);
+                        bordasEncontradas.bottom = Math.max(bordasEncontradas.bottom, y);
+                        bordasEncontradas.left = Math.min(bordasEncontradas.left, x);
+                        bordasEncontradas.right = Math.max(bordasEncontradas.right, x);
+                    }
+                }
+            }
+            
+            const folhaWidth = bordasEncontradas.right - bordasEncontradas.left;
+            const folhaHeight = bordasEncontradas.bottom - bordasEncontradas.top;
+            const areaCobertura = (folhaWidth * folhaHeight) / (width * height);
+            
+            if (folhaWidth > width * 0.2 && folhaHeight > height * 0.2 && areaCobertura > 0.1) {
+                return {
+                    x: bordasEncontradas.left,
+                    y: bordasEncontradas.top,
+                    width: folhaWidth,
+                    height: folhaHeight,
+                    aspectRatio: folhaWidth / folhaHeight,
+                    coverage: areaCobertura
+                };
+            }
+            
+            return null;
+        }
+        
+        function verificarAlinhamento(folhaInfo) {
+            const aspectOk = Math.abs(folhaInfo.aspectRatio - ALIGNMENT_CONFIG.expectedAspectRatio) < ALIGNMENT_CONFIG.tolerance;
+            const coverageOk = folhaInfo.coverage >= ALIGNMENT_CONFIG.minCoverage && 
+                              folhaInfo.coverage <= ALIGNMENT_CONFIG.maxCoverage;
+            
+            const screenCenter = { x: 0.5, y: 0.5 };
+            const folhaCenter = {
+                x: (folhaInfo.x + folhaInfo.width/2) / alignmentCanvas.width,
+                y: (folhaInfo.y + folhaInfo.height/2) / alignmentCanvas.height
+            };
+            const centeredOk = Math.abs(folhaCenter.x - screenCenter.x) < 0.2 && 
+                              Math.abs(folhaCenter.y - screenCenter.y) < 0.2;
+            
+            return aspectOk && coverageOk && centeredOk;
+        }
+        
+        function capturarImagemAutomatica() {
+            if (isCapturing || imagemCapturada) return;
+            isCapturing = true;
+            
+            console.log('📸 Captura automática!');
+            statusAlinhamento.innerHTML = '📸 Capturando...';
             
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = video.videoWidth;
@@ -898,12 +1074,20 @@
             tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
             
             imagemCapturada = tempCanvas;
+            
+            const previewArea = document.getElementById('previewArea');
+            const previewImg = document.getElementById('previewImg');
             previewImg.src = tempCanvas.toDataURL('image/jpeg');
             previewArea.style.display = 'block';
-            btnCorrigir.disabled = false;
-            statusCamera.innerHTML = '✅ Folha capturada! Clique em CORRIGIR';
-        });
+            
+            document.getElementById('btnCorrigir').disabled = false;
+            statusAlinhamento.innerHTML = '✅ Imagem capturada! Clique em CORRIGIR';
+            statusAlinhamento.className = 'status-alinhamento good';
+            
+            isCapturing = false;
+        }
         
+        // ========== FUNÇÕES DE DETECÇÃO DE RESPOSTAS ==========
         function getPixelBrilho(ctx, x, y) {
             if (x < 0 || y < 0 || x >= ctx.canvas.width || y >= ctx.canvas.height) return 255;
             const pixel = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
@@ -914,8 +1098,10 @@
             let pixelsEscuros = 0;
             let totalPixels = 0;
             
-            for (let dx = -raio; dx <= raio; dx += Math.max(1, Math.floor(raio / 4))) {
-                for (let dy = -raio; dy <= raio; dy += Math.max(1, Math.floor(raio / 4))) {
+            const step = Math.max(1, Math.floor(raio / 3));
+            
+            for (let dx = -raio; dx <= raio; dx += step) {
+                for (let dy = -raio; dy <= raio; dy += step) {
                     if (dx*dx + dy*dy <= raio*raio) {
                         const brilho = getPixelBrilho(ctx, cx + dx, cy + dy);
                         totalPixels++;
@@ -983,13 +1169,44 @@
                 }
             }
             
-            debugDiv.innerHTML = `📊 Detectadas: ${questoesComPreenchimento} questões preenchidas de ${NUM_QUESTOES}`;
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.innerHTML = `📊 Detectadas: ${questoesComPreenchimento} questões preenchidas de ${NUM_QUESTOES}<br>📐 Dimensões: ${largura}x${altura}<br>🔘 Raio do círculo: ${raioCirculo.toFixed(1)}px`;
             debugDiv.style.display = 'block';
             
             return respostas;
         }
         
-        btnCorrigir.addEventListener('click', async () => {
+        // ========== EVENTOS ==========
+        document.getElementById('btnTentarCamera').addEventListener('click', () => {
+            imagemCapturada = null;
+            aligned = false;
+            document.getElementById('previewArea').style.display = 'none';
+            document.getElementById('btnCorrigir').disabled = true;
+            iniciarCamera();
+        });
+        
+        document.getElementById('btnCapturar').addEventListener('click', () => {
+            if (!video.videoWidth || video.videoWidth === 0) {
+                alert('Aguarde a câmera iniciar completamente!');
+                return;
+            }
+            
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            imagemCapturada = tempCanvas;
+            
+            const previewImg = document.getElementById('previewImg');
+            previewImg.src = tempCanvas.toDataURL('image/jpeg');
+            document.getElementById('previewArea').style.display = 'block';
+            document.getElementById('btnCorrigir').disabled = false;
+            statusAlinhamento.innerHTML = '✅ Imagem capturada manualmente! Clique em CORRIGIR';
+        });
+        
+        document.getElementById('btnCorrigir').addEventListener('click', async () => {
             if (!imagemCapturada) {
                 alert('Capture uma foto primeiro!');
                 return;
@@ -999,6 +1216,7 @@
                 return;
             }
             
+            const btnCorrigir = document.getElementById('btnCorrigir');
             btnCorrigir.innerHTML = '🔄 Processando...';
             btnCorrigir.disabled = true;
             
@@ -1069,15 +1287,18 @@
                     
                     document.getElementById('btnNovaCorrecao').addEventListener('click', () => {
                         resultadoPanel.style.display = 'none';
-                        previewArea.style.display = 'none';
+                        document.getElementById('previewArea').style.display = 'none';
                         imagemCapturada = null;
-                        btnCorrigir.disabled = true;
-                        btnCorrigir.innerHTML = '🔍 Corrigir Prova';
-                        debugDiv.style.display = 'none';
+                        document.getElementById('btnCorrigir').disabled = true;
+                        document.getElementById('debugInfo').style.display = 'none';
+                        statusAlinhamento.innerHTML = '🟡 Pronto para nova captura';
+                        statusAlinhamento.className = 'status-alinhamento';
+                        aligned = false;
+                        guideBox.classList.remove('aligned');
                     });
                     
                 } catch (err) {
-                    debugDiv.innerHTML = `Erro: ${err.message}`;
+                    document.getElementById('debugInfo').innerHTML = `Erro: ${err.message}`;
                     alert('Erro ao processar: ' + err.message);
                 }
                 btnCorrigir.innerHTML = '🔍 Corrigir Prova';
@@ -1085,6 +1306,7 @@
             }, 100);
         });
         
+        // ========== FUNÇÕES DE UI ==========
         function renderizarListaProvas() {
             const container = document.getElementById('listaProvas');
             container.innerHTML = '';
@@ -1145,6 +1367,34 @@
             });
         }
         
+        function renderizarModalGabarito() {
+            const container = document.getElementById('gabaritoLista');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < NUM_QUESTOES; i++) {
+                const div = document.createElement('div');
+                div.className = 'gab-item';
+                div.innerHTML = `
+                    <label>Q${i+1}</label>
+                    <select id="gabSelect_${i}" data-questao="${i}">
+                        ${OPCOES.map(op => `<option value="${op}" ${gabarito[i] === op ? 'selected' : ''}>${op}</option>`).join('')}
+                    </select>
+                `;
+                container.appendChild(div);
+            }
+            
+            for (let i = 0; i < NUM_QUESTOES; i++) {
+                const select = document.getElementById(`gabSelect_${i}`);
+                if (select) {
+                    select.addEventListener('change', (e) => {
+                        const questao = parseInt(e.target.dataset.questao);
+                        gabarito[questao] = e.target.value;
+                    });
+                }
+            }
+        }
+        
+        // ========== EVENTOS DOS MODAIS ==========
         document.getElementById('btnGerenciarProvas').addEventListener('click', () => {
             renderizarListaProvas();
             document.getElementById('modalProvas').style.display = 'block';
@@ -1194,34 +1444,7 @@
             document.getElementById('modalEditarProva').style.display = 'none';
         });
         
-        function renderizarModalGabarito() {
-            const container = document.getElementById('gabaritoLista');
-            container.innerHTML = '';
-            
-            for (let i = 0; i < NUM_QUESTOES; i++) {
-                const div = document.createElement('div');
-                div.className = 'gab-item';
-                div.innerHTML = `
-                    <label>Q${i+1}</label>
-                    <select id="gabSelect_${i}" data-questao="${i}">
-                        ${OPCOES.map(op => `<option value="${op}" ${gabarito[i] === op ? 'selected' : ''}>${op}</option>`).join('')}
-                    </select>
-                `;
-                container.appendChild(div);
-            }
-            
-            for (let i = 0; i < NUM_QUESTOES; i++) {
-                const select = document.getElementById(`gabSelect_${i}`);
-                if (select) {
-                    select.addEventListener('change', (e) => {
-                        const questao = parseInt(e.target.dataset.questao);
-                        gabarito[questao] = e.target.value;
-                    });
-                }
-            }
-        }
-        
-        document.getElementById('btnAbrirGabaritoNovo').addEventListener('click', () => {
+        document.getElementById('btnAbrirGabarito').addEventListener('click', () => {
             if (!provaAtual) { alert('Selecione uma prova primeiro!'); return; }
             document.getElementById('modalGabaritoTitulo').innerHTML = `📝 ${provaAtual.nome_prova}`;
             document.getElementById('infoQuestoes').innerHTML = `${NUM_QUESTOES} questões | ${OPCOES.join(', ')}`;
@@ -1272,6 +1495,7 @@
             window.location.href = 'index.html';
         });
         
+        // ========== INICIALIZAÇÃO ==========
         async function iniciar() {
             await garantirUsuarioExistente();
             await carregarProvasDoSupabase();
