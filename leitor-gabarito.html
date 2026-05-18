@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Corrigir Gabarito - Modo Retrato</title>
+    <title>Corrigir Gabarito - Sistema Completo</title>
     <style>
         * {
             margin: 0;
@@ -43,7 +43,6 @@
             border-radius: 16px;
             overflow: hidden;
             margin-bottom: 10px;
-            /* Modo retrato - altura maior que largura */
             aspect-ratio: 3 / 4;
             border: 2px solid rgba(255,255,255,0.2);
         }
@@ -52,7 +51,6 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Espelha para ficar igual ao preview */
         }
         
         .alignment-overlay {
@@ -134,35 +132,12 @@
             cursor: not-allowed;
         }
         
-        .btn-foto {
-            background: #4461e4;
-            color: white;
-        }
-        
-        .btn-corrigir {
-            background: #1a73e8;
-            color: white;
-        }
-        
-        .btn-gabarito {
-            background: #3c39f5;
-            color: white;
-        }
-        
-        .btn-provas {
-            background: #4caf50;
-            color: white;
-        }
-        
-        .btn-sair {
-            background: #dc3545;
-            color: white;
-        }
-        
-        .btn-tentar-camera {
-            background: #ffee00;
-            font-size: 0.85rem;
-        }
+        .btn-foto { background: #4461e4; color: white; }
+        .btn-corrigir { background: #1a73e8; color: white; }
+        .btn-gabarito { background: #3c39f5; color: white; }
+        .btn-provas { background: #4caf50; color: white; }
+        .btn-sair { background: #dc3545; color: white; }
+        .btn-tentar-camera { background: #ff9800; color: #000; font-size: 0.85rem; }
         
         .resultado {
             background: rgba(30, 30, 30, 0.95);
@@ -219,6 +194,7 @@
             margin-bottom: 8px;
             font-size: 0.8rem;
             text-align: center;
+            color: white;
         }
         
         .info-gabarito {
@@ -265,6 +241,7 @@
             text-align: center;
             margin-bottom: 8px;
             font-weight: bold;
+            color: white;
         }
         
         .modal {
@@ -288,6 +265,35 @@
             margin: 20px auto;
         }
         
+        .modal-content h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #1a73e8;
+            font-size: 1.3rem;
+        }
+        
+        .config-item {
+            margin-bottom: 15px;
+        }
+        
+        .config-item label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: white;
+        }
+        
+        .config-item input, .config-item select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            background: #333;
+            color: white;
+            font-size: 0.9rem;
+        }
+        
         .gabarito-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -305,6 +311,13 @@
             text-align: center;
         }
         
+        .gab-item label {
+            display: block;
+            font-size: 0.65rem;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+        
         .gab-item select {
             width: 100%;
             padding: 6px;
@@ -313,19 +326,99 @@
             color: white;
             border: none;
             text-align: center;
+            font-size: 0.85rem;
+            font-weight: bold;
         }
         
         .modal-buttons {
             display: flex;
             gap: 10px;
+            margin-top: 10px;
         }
         
-        .btn-salvar-gabarito {
+        .modal-buttons button {
+            flex: 1;
+            margin: 0;
+        }
+        
+        .btn-salvar-gabarito { background: #4caf50; color: white; }
+        .btn-fechar-modal { background: #666; color: white; }
+        .btn-reset { background: #ff4444; color: white; margin-top: 10px; }
+        .btn-nova-prova { background: #4caf50; color: white; margin-bottom: 12px; }
+        .btn-novo { background: #4caf50; color: white; margin-top: 10px; }
+        
+        .botoes-rapidos {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-rapido {
             background: #4caf50;
+            margin: 3px;
+            padding: 6px;
+            font-size: 0.75rem;
+            width: auto;
+            flex: 1;
         }
         
-        .btn-fechar-modal {
-            background: #666;
+        .lista-provas {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .prova-item {
+            background: #2c2c2c;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .prova-item:hover {
+            background: #3d3d3d;
+        }
+        
+        .prova-info {
+            flex: 1;
+        }
+        
+        .prova-nome {
+            font-weight: bold;
+            font-size: 0.95rem;
+            color: white;
+        }
+        
+        .prova-detalhes {
+            font-size: 0.65rem;
+            color: #aaa;
+        }
+        
+        .prova-acoes {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-editar-prova {
+            background: #2196f3;
+            padding: 6px 10px;
+            font-size: 0.7rem;
+            margin: 0;
+            width: auto;
+            color: white;
+        }
+        
+        .btn-excluir-prova {
+            background: #ff4444;
+            padding: 6px 10px;
+            font-size: 0.7rem;
+            margin: 0;
+            width: auto;
+            color: white;
         }
         
         .debug-info {
@@ -338,6 +431,7 @@
             display: none;
             max-height: 120px;
             overflow-y: auto;
+            color: #0f0;
         }
         
         .orientacao-aviso {
@@ -348,6 +442,8 @@
             text-align: center;
             margin-bottom: 8px;
             display: none;
+            color: #000;
+            font-weight: bold;
         }
         
         @keyframes pulse {
@@ -405,12 +501,62 @@
         <div id="debugInfo" class="debug-info"></div>
     </div>
     
-    <!-- Modal de Provas -->
+    <!-- Modal de Gerenciamento de Provas -->
     <div id="modalProvas" class="modal">
         <div class="modal-content">
-            <h2>📚 Provas</h2>
-            <div id="listaProvas"></div>
+            <h2>📚 Minhas Provas</h2>
+            <button class="btn-nova-prova" id="btnNovaProva">➕ Criar Nova Prova</button>
+            <div id="listaProvas" class="lista-provas"></div>
             <button id="btnFecharProvas" class="btn-fechar-modal">Fechar</button>
+        </div>
+    </div>
+    
+    <!-- Modal de Criar/Editar Prova -->
+    <div id="modalEditarProva" class="modal">
+        <div class="modal-content">
+            <h2 id="modalEditarTitulo">📝 Criar Nova Prova</h2>
+            <div class="config-item">
+                <label>📛 Nome da prova:</label>
+                <input type="text" id="provaNome" placeholder="Ex: Prova 1 - Matemática">
+            </div>
+            <div class="config-item">
+                <label>📊 Quantidade de questões:</label>
+                <input type="number" id="provaNumQuestoes" min="10" max="100" step="5" value="50">
+            </div>
+            <div class="config-item">
+                <label>🔤 Número de alternativas:</label>
+                <select id="provaNumOpcoes">
+                    <option value="4">4 opções (A, B, C, D)</option>
+                    <option value="5" selected>5 opções (A, B, C, D, E)</option>
+                    <option value="6">6 opções (A, B, C, D, E, F)</option>
+                </select>
+            </div>
+            <div class="botoes-rapidos">
+                <button class="btn-rapido" data-questoes="20">20 questões</button>
+                <button class="btn-rapido" data-questoes="30">30 questões</button>
+                <button class="btn-rapido" data-questoes="40">40 questões</button>
+                <button class="btn-rapido" data-questoes="50">50 questões</button>
+            </div>
+            <div class="modal-buttons">
+                <button id="btnCriarProva" class="btn-salvar-gabarito">💾 Criar Prova</button>
+                <button id="btnCancelarEdicao" class="btn-fechar-modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal do Gabarito -->
+    <div id="modalGabarito" class="modal">
+        <div class="modal-content">
+            <h2 id="modalGabaritoTitulo">📝 Editar Gabarito</h2>
+            <div style="text-align: center; margin-bottom: 15px; font-size: 0.75rem; color: #aaa;" id="infoQuestoes">
+                Carregando...
+            </div>
+            <div id="gabaritoLista" class="gabarito-grid"></div>
+            <div class="modal-buttons">
+                <button id="btnSalvarGabarito" class="btn-salvar-gabarito">💾 Salvar Gabarito</button>
+                <button id="btnFecharGabarito" class="btn-fechar-modal">Fechar</button>
+            </div>
+            <button id="btnResetGabarito" class="btn-reset">🔄 Resetar Gabarito</button>
         </div>
     </div>
     
@@ -454,40 +600,173 @@
         let autoCaptureTimeout = null;
         let isCapturing = false;
         
-        // ========== FUNÇÕES SUPABASE ==========
-        async function carregarProvasDoSupabase() {
-            const { data, error } = await supabaseClient
-                .from('provas')
-                .select('*')
-                .eq('usuario_id', usuarioId);
+        // ========== FUNÇÃO PARA CORRIGIR ORIENTAÇÃO DA IMAGEM ==========
+        function corrigirOrientacaoImagem(imagemOriginal) {
+            // Cria um canvas para rotacionar a imagem
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
             
-            if (!error && data) {
-                provas = data;
+            // Define o tamanho do canvas (inverte largura/altura para rotacionar)
+            canvas.width = imagemOriginal.height;
+            canvas.height = imagemOriginal.width;
+            
+            // Rotaciona a imagem em 90 graus no sentido horário
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(90 * Math.PI / 180);
+            ctx.drawImage(imagemOriginal, -imagemOriginal.width / 2, -imagemOriginal.height / 2);
+            ctx.restore();
+            
+            return canvas;
+        }
+        
+        // ========== FUNÇÕES SUPABASE ==========
+        async function garantirUsuarioExistente() {
+            const { data: existe, error } = await supabaseClient
+                .from('usuarios')
+                .select('id')
+                .eq('id', usuarioId)
+                .maybeSingle();
+            
+            if (!existe && !error) {
+                await supabaseClient
+                    .from('usuarios')
+                    .insert([{
+                        id: usuarioId,
+                        nome: usuarioNome || 'Professor',
+                        email: localStorage.getItem('usuario_email') || '',
+                        senha_hash: 'temp',
+                        criado_em: new Date().toISOString()
+                    }]);
+            }
+        }
+        
+        async function carregarProvasDoSupabase() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('provas')
+                    .select('*')
+                    .eq('usuario_id', usuarioId)
+                    .order('criado_em', { ascending: false });
+                
+                if (error) throw error;
+                
+                provas = data || [];
                 renderizarListaProvas();
-                if (provas.length > 0 && !provaAtual) {
+                
+                if (provas.length === 0) {
+                    document.getElementById('infoProva').innerHTML = '📋 Nenhuma prova criada';
+                    document.getElementById('infoGabarito').innerHTML = '⚠️ Clique em "Provas" para criar';
+                } else if (!provaAtual) {
                     await selecionarProva(provas[0].id);
                 }
+            } catch (err) {
+                console.error('Erro ao carregar provas:', err);
             }
         }
         
         async function selecionarProva(provaId) {
-            const { data } = await supabaseClient
-                .from('provas')
-                .select('*')
-                .eq('id', provaId)
-                .single();
-            
-            if (data) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('provas')
+                    .select('*')
+                    .eq('id', provaId)
+                    .eq('usuario_id', usuarioId)
+                    .single();
+                
+                if (error) throw error;
+                
                 provaAtual = data;
                 NUM_QUESTOES = data.num_questoes;
                 NUM_OPCOES = data.opcoes_por_questao;
                 OPCOES = Array(NUM_OPCOES).fill().map((_, i) => String.fromCharCode(65 + i));
                 gabarito = [...data.gabarito];
                 
-                document.getElementById('infoProva').innerHTML = `📋 ${provaAtual.nome_prova} (${NUM_QUESTOES} questões)`;
+                document.getElementById('infoProva').innerHTML = `📋 ${provaAtual.nome_prova} (${NUM_QUESTOES} questões | ${NUM_OPCOES} opções)`;
                 document.getElementById('infoGabarito').innerHTML = `✅ Gabarito carregado!`;
                 document.getElementById('infoGabarito').className = 'info-gabarito carregado';
                 document.getElementById('btnAbrirGabarito').disabled = false;
+                
+                document.getElementById('modalProvas').style.display = 'none';
+            } catch (err) {
+                console.error('Erro ao selecionar prova:', err);
+            }
+        }
+        
+        async function salvarProva(nome, numQuestoes, numOpcoes, editId = null) {
+            const opcoes = Array(numOpcoes).fill().map((_, i) => String.fromCharCode(65 + i));
+            const novoGabarito = new Array(numQuestoes).fill(opcoes[0]);
+            const pesos = new Array(numQuestoes).fill(1);
+            
+            if (editId) {
+                const { error } = await supabaseClient
+                    .from('provas')
+                    .update({
+                        nome_prova: nome,
+                        num_questoes: numQuestoes,
+                        opcoes_por_questao: numOpcoes,
+                        gabarito: novoGabarito,
+                        pesos: pesos
+                    })
+                    .eq('id', editId)
+                    .eq('usuario_id', usuarioId);
+                
+                if (error) throw error;
+            } else {
+                const { error } = await supabaseClient
+                    .from('provas')
+                    .insert([{
+                        usuario_id: usuarioId,
+                        nome_prova: nome,
+                        num_questoes: numQuestoes,
+                        opcoes_por_questao: numOpcoes,
+                        gabarito: novoGabarito,
+                        pesos: pesos
+                    }]);
+                
+                if (error) throw error;
+            }
+            
+            await carregarProvasDoSupabase();
+        }
+        
+        async function excluirProva(provaId) {
+            if (!confirm('Tem certeza que deseja excluir esta prova? Todas as correções também serão excluídas.')) return;
+            
+            const { error } = await supabaseClient
+                .from('provas')
+                .delete()
+                .eq('id', provaId)
+                .eq('usuario_id', usuarioId);
+            
+            if (error) throw error;
+            
+            if (provaAtual && provaAtual.id === provaId) {
+                provaAtual = null;
+                document.getElementById('infoProva').innerHTML = '📋 Nenhuma prova selecionada';
+                document.getElementById('infoGabarito').innerHTML = '⚠️ Selecione ou crie uma prova';
+                document.getElementById('infoGabarito').className = 'info-gabarito nao-carregado';
+                document.getElementById('btnAbrirGabarito').disabled = true;
+                document.getElementById('btnCorrigir').disabled = true;
+            }
+            
+            await carregarProvasDoSupabase();
+        }
+        
+        async function salvarGabaritoProvaAtual() {
+            if (!provaAtual) return;
+            
+            const { error } = await supabaseClient
+                .from('provas')
+                .update({ gabarito: gabarito })
+                .eq('id', provaAtual.id)
+                .eq('usuario_id', usuarioId);
+            
+            if (error) {
+                alert('Erro ao salvar gabarito: ' + error.message);
+            } else {
+                alert('✅ Gabarito salvo com sucesso!');
+                document.getElementById('modalGabarito').style.display = 'none';
             }
         }
         
@@ -514,20 +793,87 @@
         
         function renderizarListaProvas() {
             const container = document.getElementById('listaProvas');
-            container.innerHTML = provas.map(p => `
-                <div class="prova-item" style="background:#2c2c2c; padding:10px; margin:5px; border-radius:10px; cursor:pointer;" onclick="selecionarProva('${p.id}')">
-                    <strong>${p.nome_prova}</strong><br>
-                    <small>${p.num_questoes} questões</small>
+            
+            if (provas.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Nenhuma prova criada ainda</div>';
+                return;
+            }
+            
+            container.innerHTML = provas.map(prova => `
+                <div class="prova-item" data-id="${prova.id}">
+                    <div class="prova-info">
+                        <div class="prova-nome">${prova.nome_prova}</div>
+                        <div class="prova-detalhes">${prova.num_questoes} questões | ${prova.opcoes_por_questao} opções</div>
+                    </div>
+                    <div class="prova-acoes">
+                        <button class="btn-editar-prova" data-id="${prova.id}">✏️</button>
+                        <button class="btn-excluir-prova" data-id="${prova.id}">🗑️</button>
+                    </div>
                 </div>
             `).join('');
+            
+            document.querySelectorAll('.prova-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('btn-editar-prova') && !e.target.classList.contains('btn-excluir-prova')) {
+                        selecionarProva(item.dataset.id);
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.btn-editar-prova').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.id;
+                    const prova = provas.find(p => p.id == id);
+                    if (prova) {
+                        document.getElementById('provaNome').value = prova.nome_prova;
+                        document.getElementById('provaNumQuestoes').value = prova.num_questoes;
+                        document.getElementById('provaNumOpcoes').value = prova.opcoes_por_questao;
+                        document.getElementById('modalEditarTitulo').innerHTML = '✏️ Editar Prova';
+                        document.getElementById('modalEditarProva').dataset.editId = id;
+                        document.getElementById('modalEditarProva').style.display = 'block';
+                        document.getElementById('modalProvas').style.display = 'none';
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.btn-excluir-prova').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.id;
+                    await excluirProva(id);
+                });
+            });
         }
         
-        window.selecionarProva = async (id) => {
-            await selecionarProva(id);
-            document.getElementById('modalProvas').style.display = 'none';
-        };
+        function renderizarModalGabarito() {
+            const container = document.getElementById('gabaritoLista');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < NUM_QUESTOES; i++) {
+                const div = document.createElement('div');
+                div.className = 'gab-item';
+                div.innerHTML = `
+                    <label>Q${i+1}</label>
+                    <select id="gabSelect_${i}" data-questao="${i}">
+                        ${OPCOES.map(op => `<option value="${op}" ${gabarito[i] === op ? 'selected' : ''}>${op}</option>`).join('')}
+                    </select>
+                `;
+                container.appendChild(div);
+            }
+            
+            for (let i = 0; i < NUM_QUESTOES; i++) {
+                const select = document.getElementById(`gabSelect_${i}`);
+                if (select) {
+                    select.addEventListener('change', (e) => {
+                        const questao = parseInt(e.target.dataset.questao);
+                        gabarito[questao] = e.target.value;
+                    });
+                }
+            }
+        }
         
-        // ========== CÂMARA EM MODO RETRATO ==========
+        // ========== CÂMERA E ALINHAMENTO ==========
         async function iniciarCamera() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -536,19 +882,17 @@
             statusAlinhamento.innerHTML = '📷 Solicitando câmera...';
             
             try {
-                // Força o modo retrato (vertical)
                 const constraints = {
                     video: {
                         facingMode: { exact: "environment" },
                         width: { ideal: 1080 },
-                        height: { ideal: 1920 }  // Prioriza altura maior (retrato)
+                        height: { ideal: 1920 }
                     }
                 };
                 
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
                 
-                // Aguarda o video carregar
                 await new Promise((resolve) => {
                     video.onloadedmetadata = () => {
                         video.play();
@@ -556,16 +900,13 @@
                     };
                 });
                 
-                // Verifica orientação
                 verificarOrientacao();
-                
                 statusAlinhamento.innerHTML = '🟡 Alinhe a folha dentro do quadrado amarelo';
                 document.getElementById('btnCapturar').disabled = false;
                 iniciarDeteccaoAlinhamento();
                 
             } catch (err) {
                 console.error('Erro câmera:', err);
-                // Fallback para qualquer câmera disponível
                 try {
                     stream = await navigator.mediaDevices.getUserMedia({ video: true });
                     video.srcObject = stream;
@@ -583,19 +924,16 @@
         function verificarOrientacao() {
             const orientacaoAviso = document.getElementById('orientacaoAviso');
             
-            // Verifica a orientação da tela
             function checkOrientation() {
                 if (window.innerHeight > window.innerWidth) {
                     orientacaoAviso.style.display = 'none';
                 } else {
                     orientacaoAviso.style.display = 'block';
-                    orientacaoAviso.style.animation = 'pulse 1s infinite';
                 }
             }
             
             checkOrientation();
             window.addEventListener('resize', checkOrientation);
-            window.addEventListener('orientationchange', checkOrientation);
         }
         
         function iniciarDeteccaoAlinhamento() {
@@ -615,9 +953,7 @@
                 const folha = detectarFolha(ctx, canvas.width, canvas.height);
                 
                 if (folha) {
-                    const containerRect = document.querySelector('.camera-container').getBoundingClientRect();
                     const videoRect = video.getBoundingClientRect();
-                    
                     const scaleX = videoRect.width / canvas.width;
                     const scaleY = videoRect.height / canvas.height;
                     
@@ -627,7 +963,6 @@
                     guideBox.style.height = `${folha.height * scaleY}px`;
                     guideBox.style.display = 'block';
                     
-                    // Verifica alinhamento (folha deve ocupar boa parte da tela)
                     const bemAlinhado = folha.coverage > 0.4 && folha.coverage < 0.95;
                     
                     if (bemAlinhado && !aligned) {
@@ -673,7 +1008,6 @@
             let minX = width, minY = height, maxX = 0, maxY = 0;
             let encontrou = false;
             
-            // Detecta pixels escuros (bordas/cantos da folha)
             const step = Math.max(1, Math.floor(Math.min(width, height) / 60));
             
             for (let y = 0; y < height; y += step) {
@@ -712,18 +1046,18 @@
             if (isCapturing || imagemCapturada) return;
             isCapturing = true;
             
-            console.log('📸 Capturando imagem...');
-            
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            imagemCapturada = canvas;
+            // Aplica correção de orientação
+            const imagemCorrigida = corrigirOrientacaoImagem(canvas);
+            imagemCapturada = imagemCorrigida;
             
             const previewImg = document.getElementById('previewImg');
-            previewImg.src = canvas.toDataURL('image/jpeg');
+            previewImg.src = imagemCorrigida.toDataURL('image/jpeg');
             document.getElementById('previewArea').style.display = 'block';
             document.getElementById('btnCorrigir').disabled = false;
             
@@ -734,9 +1068,6 @@
         
         // ========== DETECÇÃO DE RESPOSTAS ==========
         function detectarRespostasDaImagem(imgCanvas) {
-            console.log('🔍 Iniciando detecção de respostas...');
-            
-            // Redimensiona mantendo proporção
             const targetHeight = 1200;
             const scale = targetHeight / imgCanvas.height;
             const targetWidth = Math.floor(imgCanvas.width * scale);
@@ -761,8 +1092,6 @@
             }
             ctx.putImageData(imageData, 0, 0);
             
-            // Calcula grade baseada na orientação correta
-            // Como a folha é retrato, altura > largura
             const COLUNAS = Math.ceil(Math.sqrt(NUM_QUESTOES));
             const LINHAS = Math.ceil(NUM_QUESTOES / COLUNAS);
             
@@ -826,12 +1155,12 @@
                 if (melhorOpcao >= 0) {
                     respostas.push(OPCOES[melhorOpcao]);
                     questoesDetectadas++;
-                    if (questao < 15) {
+                    if (questao < 10) {
                         debugMsg.push(`✅ Q${questao+1}: ${OPCOES[melhorOpcao]} (${(maiorPreenchimento*100).toFixed(0)}%)`);
                     }
                 } else {
                     respostas.push(null);
-                    if (questao < 15) {
+                    if (questao < 10) {
                         debugMsg.push(`❌ Q${questao+1}: não detectado`);
                     }
                 }
@@ -951,13 +1280,84 @@
             document.getElementById('modalProvas').style.display = 'block';
         });
         
+        document.getElementById('btnNovaProva').addEventListener('click', () => {
+            document.getElementById('provaNome').value = '';
+            document.getElementById('provaNumQuestoes').value = 50;
+            document.getElementById('provaNumOpcoes').value = 5;
+            document.getElementById('modalEditarTitulo').innerHTML = '📝 Criar Nova Prova';
+            delete document.getElementById('modalEditarProva').dataset.editId;
+            document.getElementById('modalEditarProva').style.display = 'block';
+            document.getElementById('modalProvas').style.display = 'none';
+        });
+        
+        document.getElementById('btnCriarProva').addEventListener('click', async () => {
+            const nome = document.getElementById('provaNome').value.trim();
+            const numQuestoes = parseInt(document.getElementById('provaNumQuestoes').value);
+            const numOpcoes = parseInt(document.getElementById('provaNumOpcoes').value);
+            
+            if (!nome) { alert('Digite um nome para a prova!'); return; }
+            
+            const editId = document.getElementById('modalEditarProva').dataset.editId;
+            
+            const btn = document.getElementById('btnCriarProva');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Salvando...';
+            btn.disabled = true;
+            
+            try {
+                await salvarProva(nome, numQuestoes, numOpcoes, editId);
+                document.getElementById('modalEditarProva').style.display = 'none';
+                alert(`✅ Prova "${nome}" salva com sucesso!`);
+            } catch (err) {
+                alert('Erro ao salvar prova: ' + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+        
         document.getElementById('btnFecharProvas').addEventListener('click', () => {
             document.getElementById('modalProvas').style.display = 'none';
         });
         
+        document.getElementById('btnCancelarEdicao').addEventListener('click', () => {
+            document.getElementById('modalEditarProva').style.display = 'none';
+        });
+        
         document.getElementById('btnAbrirGabarito').addEventListener('click', () => {
-            if (!provaAtual) return;
-            alert('Gabarito atual:\n' + gabarito.map((g, i) => `Q${i+1}: ${g}`).join('\n'));
+            if (!provaAtual) { alert('Selecione uma prova primeiro!'); return; }
+            document.getElementById('modalGabaritoTitulo').innerHTML = `📝 ${provaAtual.nome_prova}`;
+            document.getElementById('infoQuestoes').innerHTML = `${NUM_QUESTOES} questões | ${OPCOES.join(', ')}`;
+            renderizarModalGabarito();
+            document.getElementById('modalGabarito').style.display = 'block';
+        });
+        
+        document.getElementById('btnSalvarGabarito').addEventListener('click', async () => {
+            await salvarGabaritoProvaAtual();
+        });
+        
+        document.getElementById('btnFecharGabarito').addEventListener('click', () => {
+            document.getElementById('modalGabarito').style.display = 'none';
+        });
+        
+        document.getElementById('btnResetGabarito').addEventListener('click', () => {
+            if (confirm('Resetar todas as respostas do gabarito?')) {
+                gabarito = new Array(NUM_QUESTOES).fill(OPCOES[0]);
+                renderizarModalGabarito();
+            }
+        });
+        
+        document.querySelectorAll('.btn-rapido').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const questoes = parseInt(btn.dataset.questoes);
+                document.getElementById('provaNumQuestoes').value = questoes;
+            });
+        });
+        
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.style.display = 'none';
+            });
         });
         
         document.getElementById('btnSair').addEventListener('click', () => {
@@ -967,8 +1367,13 @@
         });
         
         // ========== INICIALIZAÇÃO ==========
-        iniciarCamera();
-        carregarProvasDoSupabase();
+        async function iniciar() {
+            await garantirUsuarioExistente();
+            await carregarProvasDoSupabase();
+            iniciarCamera();
+        }
+        
+        iniciar();
     </script>
 </body>
 </html>
