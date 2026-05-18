@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Corrigir Gabarito - Grade 10x5</title>
+    <title>Corrigir Gabarito - Com Debug Visual</title>
     <style>
         * {
             margin: 0;
@@ -51,15 +51,6 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-        }
-        
-        .alignment-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
         }
         
         .guide-box {
@@ -396,6 +387,24 @@
             overflow-y: auto;
             color: #0f0;
         }
+        
+        .slider-container {
+            background: #333;
+            padding: 10px;
+            border-radius: 12px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .slider-container label {
+            color: white;
+            font-size: 0.7rem;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
@@ -414,15 +423,14 @@
         
         <div class="camera-container">
             <video id="video" autoplay playsinline muted></video>
-            <div class="alignment-overlay">
-                <div class="guide-box" id="guideBox"></div>
-            </div>
+            <div class="guide-box" id="guideBox"></div>
         </div>
         
         <button class="btn-tentar-camera" id="btnTentarCamera">🔄 Reiniciar câmera</button>
         
         <div class="preview-area" id="previewArea">
             <img id="previewImg">
+            <canvas id="debugCanvas" style="width:100%; border-radius:12px; margin-top:10px; border:1px solid #00ff00;"></canvas>
         </div>
         
         <div class="row-buttons">
@@ -433,6 +441,12 @@
         <button class="btn-gabarito" id="btnAbrirGabarito" disabled>📝 Editar Gabarito</button>
         <button class="btn-corrigir" id="btnCorrigir" disabled>🔍 Corrigir Prova</button>
         <button class="btn-sair" id="btnSair">🚪 Sair</button>
+        
+        <div class="slider-container" id="sliderContainer">
+            <label>🔧 Limiar de detecção (quanto menor, mais sensível):</label>
+            <input type="range" id="limiarSlider" min="30" max="120" value="70">
+            <span id="limiarValue" style="color:white;">70</span>
+        </div>
         
         <div id="resultadoPanel" class="resultado"></div>
         <div id="debugInfo" class="debug-info"></div>
@@ -513,7 +527,7 @@
         let OPCOES = ['A', 'B', 'C', 'D', 'E'];
         let gabarito = [];
         
-        // Configuração fixa da grade - 10 LINHAS e 5 COLUNAS de questões
+        // Grade fixa: 10 linhas × 5 colunas = 50 questões
         const LINHAS_QUESTOES = 10;
         const COLUNAS_QUESTOES = 5;
         
@@ -531,9 +545,23 @@
         const video = document.getElementById('video');
         const guideBox = document.getElementById('guideBox');
         const statusAlinhamento = document.getElementById('statusAlinhamento');
+        const limiarSlider = document.getElementById('limiarSlider');
+        const limiarValue = document.getElementById('limiarValue');
         
         let stream = null;
         let imagemCapturada = null;
+        let limiarDetecao = 70;
+        
+        // Slider para ajustar sensibilidade
+        limiarSlider.addEventListener('input', (e) => {
+            limiarDetecao = parseInt(e.target.value);
+            limiarValue.textContent = limiarDetecao;
+        });
+        
+        // Mostrar slider após captura
+        document.getElementById('btnCapturar').addEventListener('click', () => {
+            document.getElementById('sliderContainer').style.display = 'block';
+        });
         
         // ========== FUNÇÕES SUPABASE ==========
         async function garantirUsuarioExistente() {
@@ -801,13 +829,12 @@
                 statusAlinhamento.innerHTML = '🟡 Enquadre a folha e clique em CAPTURAR';
                 document.getElementById('btnCapturar').disabled = false;
                 
-                // Guia simples na tela
                 setTimeout(() => {
                     const videoRect = video.getBoundingClientRect();
-                    guideBox.style.left = `${videoRect.width * 0.1}px`;
-                    guideBox.style.top = `${videoRect.height * 0.1}px`;
-                    guideBox.style.width = `${videoRect.width * 0.8}px`;
-                    guideBox.style.height = `${videoRect.height * 0.8}px`;
+                    guideBox.style.left = `${videoRect.width * 0.05}px`;
+                    guideBox.style.top = `${videoRect.height * 0.05}px`;
+                    guideBox.style.width = `${videoRect.width * 0.9}px`;
+                    guideBox.style.height = `${videoRect.height * 0.9}px`;
                     guideBox.style.display = 'block';
                 }, 500);
                 
@@ -839,16 +866,16 @@
             document.getElementById('previewArea').style.display = 'block';
             document.getElementById('btnCorrigir').disabled = false;
             
-            statusAlinhamento.innerHTML = '✅ Imagem capturada! Clique em CORRIGIR';
+            statusAlinhamento.innerHTML = '✅ Imagem capturada! Ajuste o limiar se necessário e clique em CORRIGIR';
             statusAlinhamento.className = 'status-alinhamento good';
         }
         
-        // ========== DETECÇÃO DE RESPOSTAS COM GRADE FIXA 10x5 ==========
+        // ========== DETECÇÃO DE RESPOSTAS COM DEBUG VISUAL ==========
         function detectarRespostasDaImagem(imgCanvas) {
-            console.log('🔍 Iniciando detecção - Grade 10 linhas x 5 colunas');
+            console.log('🔍 Iniciando detecção - Limiar:', limiarDetecao);
             
-            // Redimensiona para um tamanho padrão
-            const targetWidth = 1200;
+            // Redimensiona
+            const targetWidth = 1000;
             const scale = targetWidth / imgCanvas.width;
             const targetHeight = Math.floor(imgCanvas.height * scale);
             
@@ -858,69 +885,88 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(imgCanvas, 0, 0, targetWidth, targetHeight);
             
-            // Pré-processamento para destacar os círculos preenchidos
+            // Cria um canvas para debug visual
+            const debugCanvas = document.getElementById('debugCanvas');
+            debugCanvas.width = targetWidth;
+            debugCanvas.height = targetHeight;
+            const debugCtx = debugCanvas.getContext('2d');
+            debugCtx.drawImage(canvas, 0, 0);
+            
+            // Pré-processamento
             const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
             const data = imageData.data;
             
-            // Calcula o brilho médio da imagem
+            // Calcula brilho médio
             let somaBrilho = 0;
             for (let i = 0; i < data.length; i += 4) {
                 somaBrilho += (data[i] + data[i+1] + data[i+2]) / 3;
             }
             const brilhoMedio = somaBrilho / (data.length / 4);
-            const limiarEscuro = Math.min(brilhoMedio * 0.5, 90);
             
-            // Binariza a imagem (preto para círculos, branco para fundo)
+            // Usa o limiar ajustável pelo usuário
+            const limiar = limiarDetecao;
+            
+            // Binariza
             for (let i = 0; i < data.length; i += 4) {
                 let brilho = (data[i] + data[i+1] + data[i+2]) / 3;
-                if (brilho < limiarEscuro) {
-                    data[i] = data[i+1] = data[i+2] = 0; // Preto
+                if (brilho < limiar) {
+                    data[i] = data[i+1] = data[i+2] = 0;
                 } else {
-                    data[i] = data[i+1] = data[i+2] = 255; // Branco
+                    data[i] = data[i+1] = data[i+2] = 255;
                 }
             }
             ctx.putImageData(imageData, 0, 0);
             
-            // Configuração da grade: 10 linhas de questões, 5 colunas de questões
-            const LINHAS = LINHAS_QUESTOES;  // 10 linhas
-            const COLUNAS = COLUNAS_QUESTOES; // 5 colunas
+            // Grade
+            const LINHAS = LINHAS_QUESTOES;
+            const COLUNAS = COLUNAS_QUESTOES;
             
             const cellWidth = targetWidth / COLUNAS;
             const cellHeight = targetHeight / LINHAS;
-            
-            // Raio do círculo (cerca de 10% da célula)
-            const circleRadius = Math.min(cellWidth, cellHeight) * 0.1;
-            // Espaçamento entre as alternativas dentro da questão
+            const circleRadius = Math.min(cellWidth, cellHeight) * 0.12;
             const optionsSpacing = cellWidth / (NUM_OPCOES + 1);
             
             const respostas = [];
             let questoesDetectadas = 0;
             const debugMsg = [];
             
-            debugMsg.push(`📊 Brilho médio: ${brilhoMedio.toFixed(1)} | Limiar: ${limiarEscuro.toFixed(1)}`);
+            debugMsg.push(`📊 Brilho médio: ${brilhoMedio.toFixed(1)} | Limiar: ${limiar}`);
             debugMsg.push(`📐 Dimensão: ${targetWidth}x${targetHeight}`);
-            debugMsg.push(`📋 Grade: ${LINHAS} linhas x ${COLUNAS} colunas (${NUM_QUESTOES} questões)`);
-            debugMsg.push(`🔘 Raio do círculo: ${circleRadius.toFixed(1)}px`);
-            debugMsg.push(`📌 ${NUM_OPCOES} opções por questão: ${OPCOES.join(', ')}`);
+            debugMsg.push(`📋 Grade: ${LINHAS} linhas x ${COLUNAS} colunas`);
+            debugMsg.push(`🔘 Raio círculo: ${circleRadius.toFixed(1)}px`);
             debugMsg.push(`---`);
             
             let questaoIndex = 0;
+            
+            // Desenha grade no debug
+            debugCtx.strokeStyle = '#00ff00';
+            debugCtx.lineWidth = 1;
+            for (let i = 1; i < COLUNAS; i++) {
+                debugCtx.beginPath();
+                debugCtx.moveTo(i * cellWidth, 0);
+                debugCtx.lineTo(i * cellWidth, targetHeight);
+                debugCtx.stroke();
+            }
+            for (let i = 1; i < LINHAS; i++) {
+                debugCtx.beginPath();
+                debugCtx.moveTo(0, i * cellHeight);
+                debugCtx.lineTo(targetWidth, i * cellHeight);
+                debugCtx.stroke();
+            }
             
             for (let linha = 0; linha < LINHAS; linha++) {
                 for (let coluna = 0; coluna < COLUNAS; coluna++) {
                     if (questaoIndex >= NUM_QUESTOES) break;
                     
-                    // Centro da célula da questão
                     const cellCenterX = (coluna + 0.5) * cellWidth;
                     const cellCenterY = (linha + 0.5) * cellHeight;
                     
                     let melhorOpcao = -1;
                     let maiorPreenchimento = 0;
                     let totalPreenchidas = 0;
+                    let porcentagens = [];
                     
-                    // Analisa cada alternativa (A, B, C, D, E...)
                     for (let opt = 0; opt < NUM_OPCOES; opt++) {
-                        // Posição do círculo da alternativa
                         const circleX = cellCenterX - cellWidth/2 + (opt + 1) * optionsSpacing;
                         const circleY = cellCenterY;
                         
@@ -928,7 +974,6 @@
                         let totalPixels = 0;
                         const raioInt = Math.floor(circleRadius);
                         
-                        // Varre os pixels dentro do círculo
                         for (let dy = -raioInt; dy <= raioInt; dy++) {
                             for (let dx = -raioInt; dx <= raioInt; dx++) {
                                 if (dx*dx + dy*dy <= circleRadius * circleRadius) {
@@ -946,35 +991,66 @@
                             }
                         }
                         
-                        const proporcaoPreenchida = totalPixels > 0 ? pixelsEscuros / totalPixels : 0;
+                        const proporcao = totalPixels > 0 ? pixelsEscuros / totalPixels : 0;
+                        porcentagens.push(proporcao);
                         
-                        // Considera preenchido se mais de 25% do círculo estiver preto
-                        if (proporcaoPreenchida > 0.25) {
+                        // Desenha círculo no debug
+                        debugCtx.beginPath();
+                        debugCtx.arc(circleX, circleY, circleRadius, 0, 2 * Math.PI);
+                        if (proporcao > 0.25) {
+                            debugCtx.fillStyle = `rgba(0, 255, 0, ${Math.min(0.8, proporcao)})`;
+                            debugCtx.fill();
+                            debugCtx.strokeStyle = '#00ff00';
+                        } else {
+                            debugCtx.strokeStyle = '#ff0000';
+                        }
+                        debugCtx.stroke();
+                        
+                        // Escreve a letra da opção
+                        debugCtx.font = `${Math.max(8, circleRadius)}px Arial`;
+                        debugCtx.fillStyle = '#ffffff';
+                        debugCtx.shadowBlur = 2;
+                        debugCtx.shadowColor = 'black';
+                        debugCtx.fillText(OPCOES[opt], circleX - 5, circleY + 5);
+                        debugCtx.shadowBlur = 0;
+                        
+                        if (proporcao > 0.20) {
                             totalPreenchidas++;
-                            if (proporcaoPreenchida > maiorPreenchimento) {
-                                maiorPreenchimento = proporcaoPreenchida;
+                            if (proporcao > maiorPreenchimento) {
+                                maiorPreenchimento = proporcao;
                                 melhorOpcao = opt;
                             }
                         }
                     }
                     
-                    // Regra: só aceita se tiver exatamente UMA alternativa preenchida
+                    // Escreve o número da questão
+                    debugCtx.font = `bold ${Math.max(10, circleRadius)}px Arial`;
+                    debugCtx.fillStyle = '#ffff00';
+                    debugCtx.fillText(`${questaoIndex+1}`, cellCenterX - 15, cellCenterY - cellHeight/2 + 15);
+                    
                     if (melhorOpcao >= 0 && totalPreenchidas === 1) {
                         respostas.push(OPCOES[melhorOpcao]);
                         questoesDetectadas++;
                         if (questaoIndex < 30) {
-                            debugMsg.push(`✅ Q${questaoIndex+1} (L${linha+1}C${coluna+1}): ${OPCOES[melhorOpcao]} (${(maiorPreenchimento*100).toFixed(0)}% preenchido)`);
+                            debugMsg.push(`✅ Q${questaoIndex+1} (L${linha+1}C${coluna+1}): ${OPCOES[melhorOpcao]} (${(maiorPreenchimento*100).toFixed(0)}%)`);
                         }
+                        // Marca a questão como detectada no debug
+                        debugCtx.fillStyle = 'rgba(0,255,0,0.3)';
+                        debugCtx.fillRect(cellCenterX - cellWidth/2, cellCenterY - cellHeight/2, cellWidth, cellHeight);
                     } else if (totalPreenchidas > 1) {
                         respostas.push(null);
                         if (questaoIndex < 30) {
                             debugMsg.push(`⚠️ Q${questaoIndex+1}: MÚLTIPLAS opções (${totalPreenchidas}) - IGNORADO`);
                         }
+                        debugCtx.fillStyle = 'rgba(255,255,0,0.3)';
+                        debugCtx.fillRect(cellCenterX - cellWidth/2, cellCenterY - cellHeight/2, cellWidth, cellHeight);
                     } else {
                         respostas.push(null);
                         if (questaoIndex < 30) {
-                            debugMsg.push(`❌ Q${questaoIndex+1}: nenhuma opção detectada`);
+                            debugMsg.push(`❌ Q${questaoIndex+1}: nenhuma opção detectada (max: ${(Math.max(...porcentagens)*100).toFixed(0)}%)`);
                         }
+                        debugCtx.fillStyle = 'rgba(255,0,0,0.2)';
+                        debugCtx.fillRect(cellCenterX - cellWidth/2, cellCenterY - cellHeight/2, cellWidth, cellHeight);
                     }
                     
                     questaoIndex++;
@@ -984,6 +1060,8 @@
             
             debugMsg.push(`---`);
             debugMsg.push(`📊 TOTAL DETECTADO: ${questoesDetectadas}/${NUM_QUESTOES} (${(questoesDetectadas/NUM_QUESTOES*100).toFixed(1)}%)`);
+            debugMsg.push(`💡 DICA: Se muitas questões não estão sendo detectadas, diminua o limiar (mais sensível).`);
+            debugMsg.push(`💡 DICA: Se detecta opções onde não há preenchimento, aumente o limiar.`);
             
             const debugDiv = document.getElementById('debugInfo');
             debugDiv.innerHTML = debugMsg.join('<br>');
@@ -1060,6 +1138,7 @@
                         document.getElementById('previewArea').style.display = 'none';
                         imagemCapturada = null;
                         document.getElementById('debugInfo').style.display = 'none';
+                        document.getElementById('sliderContainer').style.display = 'none';
                         btn.disabled = false;
                         statusAlinhamento.innerHTML = '🟡 Pronto para nova captura';
                         statusAlinhamento.className = '';
@@ -1081,6 +1160,7 @@
             document.getElementById('resultadoPanel').style.display = 'none';
             document.getElementById('btnCorrigir').disabled = true;
             document.getElementById('debugInfo').style.display = 'none';
+            document.getElementById('sliderContainer').style.display = 'none';
             iniciarCamera();
         });
         
