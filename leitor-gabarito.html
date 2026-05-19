@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Leitor de Gabarito - 60 Questões</title>
+    <title>Leitor de Gabarito - Tempo Real</title>
     <style>
         * {
             margin: 0;
@@ -53,11 +53,14 @@
             object-fit: cover;
         }
         
-        .guide-box {
+        canvas {
             position: absolute;
-            border: 3px solid rgba(255, 255, 0, 0.9);
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-            display: none;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
         }
         
         .status-alinhamento {
@@ -102,66 +105,62 @@
             cursor: not-allowed;
         }
         
-        .btn-foto { background: #4461e4; color: white; }
         .btn-corrigir { background: #1a73e8; color: white; }
         .btn-gabarito { background: #3c39f5; color: white; }
         .btn-provas { background: #4caf50; color: white; }
         .btn-sair { background: #dc3545; color: white; }
         .btn-tentar-camera { background: #ff9800; color: #000; font-size: 0.85rem; }
         
-        .resultado {
+        .resultado-preview {
             background: rgba(30, 30, 30, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 16px;
             padding: 12px;
             margin-top: 12px;
-            display: none;
         }
         
-        .acertos {
-            font-size: 1.8rem;
+        .acertos-tempo-real {
+            font-size: 1.5rem;
             color: #4caf50;
             text-align: center;
             font-weight: bold;
         }
         
-        .nota {
-            font-size: 1.3rem;
+        .nota-tempo-real {
+            font-size: 1.1rem;
             text-align: center;
-            margin: 8px 0;
         }
         
-        .detalhes {
-            max-height: 250px;
+        .respostas-grid {
+            max-height: 150px;
             overflow-y: auto;
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 4px;
-            margin-top: 12px;
+            gap: 3px;
+            margin-top: 10px;
         }
         
-        .item-certo {
+        .resposta-item {
+            padding: 3px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.6rem;
+        }
+        
+        .resposta-certa {
             background: #1b5e1b;
-            padding: 5px 3px;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 0.65rem;
         }
         
-        .item-errado {
+        .resposta-errada {
             background: #8b1a1a;
-            padding: 5px 3px;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 0.65rem;
         }
         
-        .item-nao-detectado {
+        .resposta-nao-detectada {
             background: #555;
-            padding: 5px 3px;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 0.65rem;
+        }
+        
+        .resposta-pendente {
+            background: #333;
         }
         
         .info-usuario, .info-prova {
@@ -198,17 +197,6 @@
         
         .row-buttons button {
             flex: 1;
-        }
-        
-        .preview-area {
-            margin-top: 10px;
-            display: none;
-        }
-        
-        .preview-area img {
-            width: 100%;
-            border-radius: 12px;
-            border: 2px solid #4caf50;
         }
         
         .modal {
@@ -312,23 +300,6 @@
         .btn-fechar-modal { background: #666; color: white; }
         .btn-reset { background: #ff4444; color: white; margin-top: 10px; }
         .btn-nova-prova { background: #4caf50; color: white; margin-bottom: 12px; }
-        .btn-novo { background: #4caf50; color: white; margin-top: 10px; }
-        
-        .botoes-rapidos {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-            flex-wrap: wrap;
-        }
-        
-        .btn-rapido {
-            background: #4caf50;
-            margin: 3px;
-            padding: 6px;
-            font-size: 0.75rem;
-            width: auto;
-            flex: 1;
-        }
         
         .lista-provas {
             max-height: 300px;
@@ -388,19 +359,6 @@
             color: white;
         }
         
-        .debug-info {
-            background: rgba(26, 26, 46, 0.95);
-            padding: 8px;
-            border-radius: 8px;
-            margin-top: 10px;
-            font-size: 0.65rem;
-            font-family: monospace;
-            display: none;
-            max-height: 200px;
-            overflow-y: auto;
-            color: #0f0;
-        }
-        
         .slider-container {
             background: #333;
             padding: 10px;
@@ -418,18 +376,27 @@
             margin: 5px 0;
         }
         
-        .toggle-debug {
-            background: #555;
-            padding: 5px;
-            font-size: 0.7rem;
-            margin-top: 5px;
+        .btn-corrigir-auto {
+            background: #2196f3;
+        }
+        
+        .btn-corrigir-auto.ativo {
+            background: #f44336;
+        }
+        
+        .indicador-qualidade {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📸 Leitor de Gabarito - 60 Questões</h1>
+            <h1>📸 Leitor de Gabarito - Tempo Real</h1>
         </div>
         
         <div class="info-usuario" id="infoUsuario">Carregando...</div>
@@ -442,24 +409,15 @@
         
         <div class="camera-container">
             <video id="video" autoplay playsinline muted></video>
-            <div class="guide-box" id="guideBox"></div>
-        </div>
-        
-        <button class="btn-tentar-camera" id="btnTentarCamera">🔄 Reiniciar câmera</button>
-        
-        <div class="preview-area" id="previewArea">
-            <img id="previewImg">
-            <canvas id="debugCanvas" style="width:100%; border-radius:12px; margin-top:10px; border:1px solid #00ff00;"></canvas>
-            <button class="toggle-debug" id="toggleDebug">🔧 Mostrar/Esconder Debug</button>
+            <canvas id="overlayCanvas"></canvas>
         </div>
         
         <div class="row-buttons">
             <button class="btn-provas" id="btnGerenciarProvas">📚 Provas</button>
-            <button class="btn-foto" id="btnCapturar" disabled>📷 Capturar</button>
+            <button class="btn-corrigir-auto" id="btnCorrigirAuto">🎯 Leitura Automática</button>
         </div>
         
         <button class="btn-gabarito" id="btnAbrirGabarito" disabled>📝 Editar Gabarito</button>
-        <button class="btn-corrigir" id="btnCorrigir" disabled>🔍 Corrigir Prova</button>
         <button class="btn-sair" id="btnSair">🚪 Sair</button>
         
         <div class="slider-container">
@@ -471,8 +429,11 @@
             <span id="sensibilidadeValue" style="color:white;">0.22</span>
         </div>
         
-        <div id="resultadoPanel" class="resultado"></div>
-        <div id="debugInfo" class="debug-info"></div>
+        <div class="resultado-preview" id="resultadoPreview" style="display: none;">
+            <div class="acertos-tempo-real" id="acertosTempoReal">- / -</div>
+            <div class="nota-tempo-real" id="notaTempoReal">🎓 NOTA: -</div>
+            <div class="respostas-grid" id="respostasGrid"></div>
+        </div>
     </div>
     
     <!-- Modal de Gerenciamento de Provas -->
@@ -536,7 +497,6 @@
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Configuração da grade: 10 linhas x 6 colunas = 60 questões
         const LINHAS_QUESTOES = 10;
         const COLUNAS_QUESTOES = 6;
         
@@ -559,7 +519,7 @@
         
         // Elementos
         const video = document.getElementById('video');
-        const guideBox = document.getElementById('guideBox');
+        const overlayCanvas = document.getElementById('overlayCanvas');
         const statusAlinhamento = document.getElementById('statusAlinhamento');
         const limiarSlider = document.getElementById('limiarSlider');
         const limiarValue = document.getElementById('limiarValue');
@@ -567,9 +527,11 @@
         const sensibilidadeValue = document.getElementById('sensibilidadeValue');
         
         let stream = null;
-        let imagemCapturada = null;
         let limiarDetecao = 80;
         let sensibilidadeCirculo = 0.22;
+        let leituraAtiva = false;
+        let frameInterval = null;
+        let ultimoProcessamento = 0;
         
         limiarSlider.addEventListener('input', (e) => {
             limiarDetecao = parseInt(e.target.value);
@@ -645,6 +607,11 @@
                 document.getElementById('btnAbrirGabarito').disabled = false;
                 
                 document.getElementById('modalProvas').style.display = 'none';
+                
+                // Se a leitura automática estiver ativa, reinicia para atualizar com novo gabarito
+                if (leituraAtiva) {
+                    processarFrame();
+                }
             } catch (err) {
                 console.error('Erro ao selecionar prova:', err);
             }
@@ -692,7 +659,6 @@
                 document.getElementById('infoProva').innerHTML = '📋 Nenhuma prova selecionada';
                 document.getElementById('infoGabarito').innerHTML = '⚠️ Selecione ou crie uma prova';
                 document.getElementById('btnAbrirGabarito').disabled = true;
-                document.getElementById('btnCorrigir').disabled = true;
             }
             
             await carregarProvasDoSupabase();
@@ -714,13 +680,8 @@
             }
         }
         
-        async function salvarCorrecao(acertos, nota, respostasAluno) {
+        async function salvarCorrecao(acertos, nota, respostasAluno, imagemBase64) {
             if (!provaAtual) return;
-            
-            let imagemBase64 = null;
-            if (imagemCapturada) {
-                imagemBase64 = imagemCapturada.toDataURL('image/jpeg', 0.5);
-            }
             
             await supabaseClient
                 .from('correcoes')
@@ -844,17 +805,11 @@
                     };
                 });
                 
-                statusAlinhamento.innerHTML = '🟡 Enquadre a folha de respostas e clique em CAPTURAR';
-                document.getElementById('btnCapturar').disabled = false;
+                statusAlinhamento.innerHTML = '🟡 Aponte para a folha de respostas - A leitura é automática!';
+                document.getElementById('btnCorrigirAuto').disabled = false;
                 
-                setTimeout(() => {
-                    const videoRect = video.getBoundingClientRect();
-                    guideBox.style.left = `${videoRect.width * 0.05}px`;
-                    guideBox.style.top = `${videoRect.height * 0.05}px`;
-                    guideBox.style.width = `${videoRect.width * 0.9}px`;
-                    guideBox.style.height = `${videoRect.height * 0.9}px`;
-                    guideBox.style.display = 'block';
-                }, 500);
+                // Inicia a leitura automática
+                iniciarLeituraAutomatica();
                 
             } catch (err) {
                 console.error('Erro câmera:', err);
@@ -862,70 +817,63 @@
                     stream = await navigator.mediaDevices.getUserMedia({ video: true });
                     video.srcObject = stream;
                     await video.play();
-                    statusAlinhamento.innerHTML = '🟡 Enquadre a folha e clique em CAPTURAR';
-                    document.getElementById('btnCapturar').disabled = false;
+                    statusAlinhamento.innerHTML = '🟡 Aponte para a folha de respostas';
+                    iniciarLeituraAutomatica();
                 } catch (fallbackErr) {
                     statusAlinhamento.innerHTML = '❌ Não foi possível acessar a câmera';
                 }
             }
         }
         
-        function capturarImagem() {
+        function iniciarLeituraAutomatica() {
+            if (frameInterval) clearInterval(frameInterval);
+            
+            leituraAtiva = true;
+            document.getElementById('btnCorrigirAuto').innerHTML = '⏹️ Parar Leitura';
+            document.getElementById('btnCorrigirAuto').classList.add('ativo');
+            
+            // Processa a cada 500ms
+            frameInterval = setInterval(() => {
+                if (leituraAtiva && video.videoWidth > 0 && provaAtual) {
+                    processarFrame();
+                }
+            }, 500);
+        }
+        
+        function pararLeituraAutomatica() {
+            if (frameInterval) {
+                clearInterval(frameInterval);
+                frameInterval = null;
+            }
+            leituraAtiva = false;
+            document.getElementById('btnCorrigirAuto').innerHTML = '🎯 Leitura Automática';
+            document.getElementById('btnCorrigirAuto').classList.remove('ativo');
+            
+            // Limpa o overlay
+            const ctx = overlayCanvas.getContext('2d');
+            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
+        
+        function alternarLeitura() {
+            if (leituraAtiva) {
+                pararLeituraAutomatica();
+            } else {
+                iniciarLeituraAutomatica();
+            }
+        }
+        
+        // ========== DETECÇÃO EM TEMPO REAL ==========
+        function capturarFrameAtual() {
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            imagemCapturada = canvas;
-            
-            const previewImg = document.getElementById('previewImg');
-            previewImg.src = canvas.toDataURL('image/jpeg');
-            document.getElementById('previewArea').style.display = 'block';
-            document.getElementById('btnCorrigir').disabled = false;
-            
-            statusAlinhamento.innerHTML = '✅ Imagem capturada! Ajuste os parâmetros se necessário e clique em CORRIGIR';
-            statusAlinhamento.className = 'status-alinhamento good';
+            return canvas;
         }
         
-        // ========== DETECÇÃO INTELIGENTE DE CÍRCULOS ==========
-        
-        // Função para encontrar os cantos da folha (detecção de bordas)
-        function encontrarCantosFolha(ctx, width, height) {
-            // Cria uma versão em escala de cinza e encontra bordas
-            const imageData = ctx.getImageData(0, 0, width, height);
-            const dados = imageData.data;
-            
-            // Amostragem nas bordas para encontrar a região da folha
-            // Simplificado: assume que a folha ocupa a maior parte central
-            // Retorna as margens estimadas
-            let topMargin = height * 0.05;
-            let bottomMargin = height * 0.95;
-            let leftMargin = width * 0.05;
-            let rightMargin = width * 0.95;
-            
-            // Busca por bordas verticais (detecta mudanças bruscas)
-            const amostrasY = Math.floor(height / 10);
-            for (let y = amostrasY; y < height - amostrasY; y += amostrasY) {
-                for (let x = 0; x < width; x += 5) {
-                    const idx = (y * width + x) * 4;
-                    const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
-                    if (brilho < 100) { // Encontrou borda escura
-                        if (x < width/2 && x > leftMargin) leftMargin = x;
-                        if (x > width/2 && x < rightMargin) rightMargin = x;
-                    }
-                }
-            }
-            
-            return { top: topMargin, bottom: bottomMargin, left: leftMargin, right: rightMargin };
-        }
-        
-        // Função principal de detecção
-        function detectarRespostasDaImagem(imgCanvas) {
-            console.log('🔍 Iniciando detecção inteligente - Limiar:', limiarDetecao);
-            
-            // Redimensiona para processamento
-            const targetWidth = 1000;
+        function detectarRespostasEmFrame(imgCanvas) {
+            const targetWidth = 800; // Menor para performance
             const scale = targetWidth / imgCanvas.width;
             const targetHeight = Math.floor(imgCanvas.height * scale);
             
@@ -935,22 +883,17 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(imgCanvas, 0, 0, targetWidth, targetHeight);
             
-            // Canvas para debug visual
-            const debugCanvas = document.getElementById('debugCanvas');
-            debugCanvas.width = targetWidth;
-            debugCanvas.height = targetHeight;
-            const debugCtx = debugCanvas.getContext('2d');
-            debugCtx.drawImage(canvas, 0, 0);
+            // Configura o canvas de overlay com o mesmo tamanho
+            overlayCanvas.width = targetWidth;
+            overlayCanvas.height = targetHeight;
+            const overlayCtx = overlayCanvas.getContext('2d');
             
             // Obtém dados da imagem
             const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
             const dadosOriginais = new Uint8ClampedArray(imageData.data);
             
-            // Encontra os cantos da folha
-            const folha = encontrarCantosFolha(ctx, targetWidth, targetHeight);
-            
-            // Margens internas para a área de respostas (ajustável)
-            const margemTopo = targetHeight * 0.25;  // Área do cabeçalho
+            // Área de respostas (após o cabeçalho)
+            const margemTopo = targetHeight * 0.22;
             const margemBaixo = targetHeight * 0.05;
             const margemEsquerda = targetWidth * 0.08;
             const margemDireita = targetWidth * 0.08;
@@ -960,60 +903,45 @@
             const areaEsquerda = margemEsquerda;
             const areaDireita = targetWidth - margemDireita;
             
-            const LINHAS = LINHAS_QUESTOES;
-            const COLUNAS = COLUNAS_QUESTOES;
-            
-            const cellWidth = (areaDireita - areaEsquerda) / COLUNAS;
-            const cellHeight = (areaBaixo - areaTopo) / LINHAS;
+            const cellWidth = (areaDireita - areaEsquerda) / COLUNAS_QUESTOES;
+            const cellHeight = (areaBaixo - areaTopo) / LINHAS_QUESTOES;
             const circleRadius = Math.min(cellWidth, cellHeight) * 0.10;
             const optionsSpacing = cellWidth / (NUM_OPCOES + 1);
             
-            const respostas = [];
-            let questoesDetectadas = 0;
-            const debugMsg = [];
+            // Limpa o overlay
+            overlayCtx.clearRect(0, 0, targetWidth, targetHeight);
+            overlayCtx.globalAlpha = 0.8;
             
-            debugMsg.push(`📊 Configuração: ${LINHAS} linhas x ${COLUNAS} colunas = ${LINHAS*COLUNAS} questões`);
-            debugMsg.push(`📐 Dimensão: ${targetWidth}x${targetHeight}`);
-            debugMsg.push(`📍 Área de respostas: (${areaEsquerda.toFixed(0)}, ${areaTopo.toFixed(0)}) até (${areaDireita.toFixed(0)}, ${areaBaixo.toFixed(0)})`);
-            debugMsg.push(`🔘 Raio de detecção: ${circleRadius.toFixed(1)}px`);
-            debugMsg.push(`🎯 Limiar: ${limiarDetecao} | Sensibilidade: ${sensibilidadeCirculo}`);
-            debugMsg.push(`---`);
+            // Desenha a área de detecção
+            overlayCtx.strokeStyle = '#ffff00';
+            overlayCtx.lineWidth = 2;
+            overlayCtx.strokeRect(areaEsquerda, areaTopo, areaDireita - areaEsquerda, areaBaixo - areaTopo);
             
-            // Desenha o contorno da área de respostas no debug
-            debugCtx.strokeStyle = '#ffff00';
-            debugCtx.lineWidth = 2;
-            debugCtx.strokeRect(areaEsquerda, areaTopo, areaDireita - areaEsquerda, areaBaixo - areaTopo);
-            
-            // Desenha grade de referência
-            debugCtx.strokeStyle = '#00ff00';
-            debugCtx.lineWidth = 1;
-            for (let i = 0; i <= COLUNAS; i++) {
+            // Desenha grade
+            overlayCtx.strokeStyle = '#00ff00';
+            overlayCtx.lineWidth = 1;
+            for (let i = 0; i <= COLUNAS_QUESTOES; i++) {
                 const x = areaEsquerda + i * cellWidth;
-                debugCtx.beginPath();
-                debugCtx.moveTo(x, areaTopo);
-                debugCtx.lineTo(x, areaBaixo);
-                debugCtx.stroke();
+                overlayCtx.beginPath();
+                overlayCtx.moveTo(x, areaTopo);
+                overlayCtx.lineTo(x, areaBaixo);
+                overlayCtx.stroke();
             }
-            for (let i = 0; i <= LINHAS; i++) {
+            for (let i = 0; i <= LINHAS_QUESTOES; i++) {
                 const y = areaTopo + i * cellHeight;
-                debugCtx.beginPath();
-                debugCtx.moveTo(areaEsquerda, y);
-                debugCtx.lineTo(areaDireita, y);
-                debugCtx.stroke();
+                overlayCtx.beginPath();
+                overlayCtx.moveTo(areaEsquerda, y);
+                overlayCtx.lineTo(areaDireita, y);
+                overlayCtx.stroke();
             }
             
-            // Função para verificar se um ponto está escuro (preenchido)
             function isPixelDark(x, y, dados) {
                 if (x < 0 || x >= targetWidth || y < 0 || y >= targetHeight) return false;
                 const idx = (Math.floor(y) * targetWidth + Math.floor(x)) * 4;
-                const r = dados[idx];
-                const g = dados[idx+1];
-                const b = dados[idx+2];
-                const brilho = (r + g + b) / 3;
+                const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
                 return brilho < limiarDetecao;
             }
             
-            // Função para calcular proporção de pixels escuros em um círculo
             function calcularPreenchimentoCirculo(cx, cy, raio, dados) {
                 let pixelsEscuros = 0;
                 let totalPixels = 0;
@@ -1033,14 +961,15 @@
                         }
                     }
                 }
-                
                 return totalPixels > 0 ? pixelsEscuros / totalPixels : 0;
             }
             
+            const respostas = [];
+            let questoesDetectadas = 0;
             let questaoIndex = 0;
             
-            for (let linha = 0; linha < LINHAS; linha++) {
-                for (let coluna = 0; coluna < COLUNAS; coluna++) {
+            for (let linha = 0; linha < LINHAS_QUESTOES; linha++) {
+                for (let coluna = 0; coluna < COLUNAS_QUESTOES; coluna++) {
                     if (questaoIndex >= NUM_QUESTOES) break;
                     
                     const cellCenterX = areaEsquerda + (coluna + 0.5) * cellWidth;
@@ -1049,77 +978,60 @@
                     let melhorOpcao = -1;
                     let maiorPreenchimento = 0;
                     let totalPreenchidas = 0;
-                    let preenchimentos = [];
                     
-                    // Analisa cada opção
                     for (let opt = 0; opt < NUM_OPCOES; opt++) {
                         const circleX = cellCenterX - cellWidth/2 + (opt + 1) * optionsSpacing;
                         const circleY = cellCenterY;
                         
                         const proporcao = calcularPreenchimentoCirculo(circleX, circleY, circleRadius, dadosOriginais);
-                        preenchimentos.push(proporcao);
                         
-                        // Desenha círculo no debug
-                        debugCtx.beginPath();
-                        debugCtx.arc(circleX, circleY, circleRadius, 0, 2 * Math.PI);
+                        overlayCtx.beginPath();
+                        overlayCtx.arc(circleX, circleY, circleRadius, 0, 2 * Math.PI);
                         
                         if (proporcao > sensibilidadeCirculo) {
-                            const intensidade = Math.min(0.9, proporcao + 0.2);
-                            debugCtx.fillStyle = `rgba(0, 200, 0, ${intensidade})`;
-                            debugCtx.fill();
-                            debugCtx.strokeStyle = '#00ff00';
+                            overlayCtx.fillStyle = `rgba(0, 200, 0, 0.7)`;
+                            overlayCtx.fill();
+                            overlayCtx.strokeStyle = '#00ff00';
                             totalPreenchidas++;
                             if (proporcao > maiorPreenchimento) {
                                 maiorPreenchimento = proporcao;
                                 melhorOpcao = opt;
                             }
                         } else if (proporcao > 0.10) {
-                            debugCtx.fillStyle = `rgba(255, 100, 0, ${proporcao * 2})`;
-                            debugCtx.fill();
-                            debugCtx.strokeStyle = '#ffaa00';
+                            overlayCtx.fillStyle = `rgba(255, 150, 0, 0.5)`;
+                            overlayCtx.fill();
+                            overlayCtx.strokeStyle = '#ffaa00';
                         } else {
-                            debugCtx.strokeStyle = '#ff4444';
+                            overlayCtx.strokeStyle = '#ff4444';
                         }
-                        debugCtx.stroke();
+                        overlayCtx.stroke();
                         
-                        // Escreve a letra da opção
-                        debugCtx.font = `bold ${Math.max(9, circleRadius)}px Arial`;
-                        debugCtx.fillStyle = '#ffffff';
-                        debugCtx.shadowBlur = 2;
-                        debugCtx.shadowColor = 'black';
-                        debugCtx.fillText(OPCOES[opt], circleX - 5, circleY + 5);
-                        debugCtx.shadowBlur = 0;
+                        overlayCtx.font = `bold ${Math.max(8, circleRadius)}px Arial`;
+                        overlayCtx.fillStyle = '#ffffff';
+                        overlayCtx.shadowBlur = 2;
+                        overlayCtx.shadowColor = 'black';
+                        overlayCtx.fillText(OPCOES[opt], circleX - 5, circleY + 5);
+                        overlayCtx.shadowBlur = 0;
                     }
                     
                     // Número da questão
-                    debugCtx.font = `bold ${Math.max(10, circleRadius + 2)}px Arial`;
-                    debugCtx.fillStyle = '#ffff00';
-                    debugCtx.fillText(`${questaoIndex+1}`, cellCenterX - cellWidth/2 + 5, cellCenterY - cellHeight/2 + 15);
+                    overlayCtx.font = `bold ${Math.max(9, circleRadius + 2)}px Arial`;
+                    overlayCtx.fillStyle = '#ffff00';
+                    overlayCtx.fillText(`${questaoIndex+1}`, cellCenterX - cellWidth/2 + 5, cellCenterY - cellHeight/2 + 15);
                     
-                    // Decide a resposta
                     if (melhorOpcao >= 0 && totalPreenchidas === 1) {
                         respostas.push(OPCOES[melhorOpcao]);
                         questoesDetectadas++;
-                        if (questaoIndex < 40) {
-                            debugMsg.push(`✅ Q${questaoIndex+1} (${linha+1},${coluna+1}): ${OPCOES[melhorOpcao]} (${(maiorPreenchimento*100).toFixed(0)}%)`);
-                        }
-                        debugCtx.fillStyle = 'rgba(0,255,0,0.15)';
-                        debugCtx.fillRect(cellCenterX - cellWidth/2, cellCenterY - cellHeight/2, cellWidth, cellHeight);
+                        overlayCtx.fillStyle = 'rgba(0,255,0,0.15)';
+                        overlayCtx.fillRect(cellCenterX - cellWidth/2, cellCenterY - cellHeight/2, cellWidth, cellHeight);
                     } else if (totalPreenchidas > 1) {
                         respostas.push(null);
-                        if (questaoIndex < 40) {
-                            debugMsg.push(`⚠️ Q${questaoIndex+1}: MÚLTIPLAS opções (${totalPreenchidas})`);
-                        }
-                        debugCtx.fillStyle = 'rgba(255,255,0,0.15)';
-                        debugCtx.fillRect(cellCenterX - cellWidth/2, cellCenterY - cellHeight/2, cellWidth, cellHeight);
+                        overlayCtx.fillStyle = 'rgba(255,255,0,0.15)';
+                        overlayCtx.fillRect(cellCenterX - cellWidth/2, cellCenterY - cellHeight/2, cellWidth, cellHeight);
                     } else {
                         respostas.push(null);
-                        const maxPreench = Math.max(...preenchimentos);
-                        if (questaoIndex < 40 && maxPreench > 0.10) {
-                            debugMsg.push(`❌ Q${questaoIndex+1}: preenchimento parcial (${(maxPreench*100).toFixed(0)}%)`);
-                        }
-                        debugCtx.fillStyle = 'rgba(255,0,0,0.1)';
-                        debugCtx.fillRect(cellCenterX - cellWidth/2, cellCenterY - cellHeight/2, cellWidth, cellHeight);
+                        overlayCtx.fillStyle = 'rgba(255,0,0,0.1)';
+                        overlayCtx.fillRect(cellCenterX - cellWidth/2, cellCenterY - cellHeight/2, cellWidth, cellHeight);
                     }
                     
                     questaoIndex++;
@@ -1127,127 +1039,68 @@
                 if (questaoIndex >= NUM_QUESTOES) break;
             }
             
-            debugMsg.push(`---`);
-            debugMsg.push(`📊 TOTAL DETECTADO: ${questoesDetectadas}/${NUM_QUESTOES} (${(questoesDetectadas/NUM_QUESTOES*100).toFixed(1)}%)`);
-            debugMsg.push(`💡 DICA: Se detecta poucas questões, DIMINUA o limiar (ex: 60-70)`);
-            debugMsg.push(`💡 DICA: Se detecta opções não preenchidas, AUMENTE o limiar (ex: 100-120) ou a sensibilidade`);
-            debugMsg.push(`💡 DICA: Mantenha a folha bem iluminada e centralizada na câmera`);
-            
-            const debugDiv = document.getElementById('debugInfo');
-            debugDiv.innerHTML = debugMsg.join('<br>');
-            debugDiv.style.display = 'block';
-            
-            return respostas;
+            return { respostas, questoesDetectadas };
         }
         
-        // ========== CORREÇÃO ==========
-        document.getElementById('btnCorrigir').addEventListener('click', async () => {
-            if (!imagemCapturada) {
-                alert('Capture uma foto primeiro!');
-                return;
-            }
-            if (!provaAtual) {
-                alert('Selecione uma prova primeiro!');
-                return;
-            }
+        function atualizarInterfaceResultados(respostas, questoesDetectadas) {
+            if (!provaAtual) return;
             
-            const btn = document.getElementById('btnCorrigir');
-            btn.innerHTML = '🔄 Processando...';
-            btn.disabled = true;
-            statusAlinhamento.innerHTML = '🟣 Processando imagem...';
+            let acertos = 0;
+            const detalhes = [];
             
-            setTimeout(async () => {
-                try {
-                    const respostasAluno = detectarRespostasDaImagem(imagemCapturada);
-                    
-                    let acertos = 0;
-                    let questoesValidas = 0;
-                    const detalhes = [];
-                    const respostasSalvar = [];
-                    
-                    for (let i = 0; i < NUM_QUESTOES; i++) {
-                        const aluno = respostasAluno[i];
-                        const correto = gabarito[i];
-                        
-                        if (aluno === null) {
-                            detalhes.push({ num: i+1, aluno: '⚪', gabarito: correto, certo: false, detectado: false });
-                            respostasSalvar.push(null);
-                        } else {
-                            questoesValidas++;
-                            const certo = (aluno === correto);
-                            if (certo) acertos++;
-                            detalhes.push({ num: i+1, aluno: aluno, gabarito: correto, certo: certo, detectado: true });
-                            respostasSalvar.push(aluno);
-                        }
-                    }
-                    
-                    const nota = (acertos / NUM_QUESTOES) * 10;
-                    
-                    await salvarCorrecao(acertos, nota, respostasSalvar);
-                    
-                    const panel = document.getElementById('resultadoPanel');
-                    panel.style.display = 'block';
-                    panel.innerHTML = `
-                        <div class="acertos">✅ ${acertos} / ${NUM_QUESTOES}</div>
-                        <div class="nota">🎓 NOTA: ${nota.toFixed(1)}</div>
-                        <div style="text-align:center; padding:8px; background:#333; border-radius:10px; margin:8px 0;">
-                            📊 ${questoesValidas} questões detectadas | ${NUM_QUESTOES - questoesValidas} não preenchidas/identificadas
-                        </div>
-                        <div class="detalhes" id="detalhesGrid"></div>
-                        <button class="btn-novo" id="btnNovaCorrecao" style="background:#4caf50; margin-top:10px;">📷 Nova Correção</button>
-                    `;
-                    
-                    const grid = document.getElementById('detalhesGrid');
-                    grid.innerHTML = detalhes.map(d => `
-                        <div class="${d.detectado ? (d.certo ? 'item-certo' : 'item-errado') : 'item-nao-detectado'}">
-                            <strong>${d.num}</strong><br>${d.aluno}<br><small>(${d.gabarito})</small>
-                        </div>
-                    `).join('');
-                    
-                    document.getElementById('btnNovaCorrecao').addEventListener('click', () => {
-                        panel.style.display = 'none';
-                        document.getElementById('previewArea').style.display = 'none';
-                        imagemCapturada = null;
-                        document.getElementById('debugInfo').style.display = 'none';
-                        btn.disabled = false;
-                        statusAlinhamento.innerHTML = '🟡 Pronto para nova captura';
-                        statusAlinhamento.className = '';
-                    });
-                    
-                    statusAlinhamento.innerHTML = `✅ Correção concluída! ${acertos} acertos`;
-                    statusAlinhamento.className = 'status-alinhamento good';
-                    
-                } catch (err) {
-                    alert('Erro ao corrigir: ' + err.message);
-                    statusAlinhamento.innerHTML = '❌ Erro na correção';
-                    statusAlinhamento.className = '';
-                }
+            for (let i = 0; i < NUM_QUESTOES; i++) {
+                const aluno = respostas[i];
+                const correto = gabarito[i];
                 
-                btn.innerHTML = '🔍 Corrigir Prova';
-                btn.disabled = false;
-            }, 100);
-        });
+                if (aluno === null) {
+                    detalhes.push({ num: i+1, aluno: '⚪', correto: false, certo: false });
+                } else {
+                    const certo = (aluno === correto);
+                    if (certo) acertos++;
+                    detalhes.push({ num: i+1, aluno: aluno, correto: correto, certo: certo });
+                }
+            }
+            
+            const nota = (acertos / NUM_QUESTOES) * 10;
+            
+            document.getElementById('resultadoPreview').style.display = 'block';
+            document.getElementById('acertosTempoReal').innerHTML = `✅ ${acertos} / ${NUM_QUESTOES}`;
+            document.getElementById('notaTempoReal').innerHTML = `🎓 NOTA: ${nota.toFixed(1)}`;
+            
+            const grid = document.getElementById('respostasGrid');
+            grid.innerHTML = detalhes.map(d => `
+                <div class="resposta-item ${d.aluno === '⚪' ? 'resposta-nao-detectada' : (d.certo ? 'resposta-certa' : 'resposta-errada')}">
+                    <strong>${d.num}</strong><br>${d.aluno}<br><small>${d.aluno !== '⚪' ? '(' + d.correto + ')' : ''}</small>
+                </div>
+            `).join('');
+            
+            // Feedback visual da qualidade
+            if (questoesDetectadas > NUM_QUESTOES * 0.8) {
+                statusAlinhamento.innerHTML = `✅ Ótimo! ${questoesDetectadas}/${NUM_QUESTOES} questões detectadas`;
+                statusAlinhamento.className = 'status-alinhamento good';
+            } else if (questoesDetectadas > NUM_QUESTOES * 0.5) {
+                statusAlinhamento.innerHTML = `🟡 Razoável: ${questoesDetectadas}/${NUM_QUESTOES} questões detectadas. Ajuste o enquadramento.`;
+                statusAlinhamento.className = 'status-alinhamento warning';
+            } else {
+                statusAlinhamento.innerHTML = `🔴 Poucas questões detectadas (${questoesDetectadas}/${NUM_QUESTOES}). Verifique iluminação e enquadramento.`;
+                statusAlinhamento.className = '';
+            }
+        }
         
-        // Toggle debug
-        document.getElementById('toggleDebug').addEventListener('click', () => {
-            const debugDiv = document.getElementById('debugInfo');
-            debugDiv.style.display = debugDiv.style.display === 'none' ? 'block' : 'none';
-        });
+        function processarFrame() {
+            if (!provaAtual || !video.videoWidth) return;
+            
+            try {
+                const frame = capturarFrameAtual();
+                const { respostas, questoesDetectadas } = detectarRespostasEmFrame(frame);
+                atualizarInterfaceResultados(respostas, questoesDetectadas);
+            } catch (err) {
+                console.error('Erro ao processar frame:', err);
+            }
+        }
         
         // ========== EVENTOS ==========
-        document.getElementById('btnTentarCamera').addEventListener('click', () => {
-            imagemCapturada = null;
-            document.getElementById('previewArea').style.display = 'none';
-            document.getElementById('resultadoPanel').style.display = 'none';
-            document.getElementById('btnCorrigir').disabled = true;
-            document.getElementById('debugInfo').style.display = 'none';
-            iniciarCamera();
-        });
-        
-        document.getElementById('btnCapturar').addEventListener('click', () => {
-            if (!video.videoWidth) return;
-            capturarImagem();
-        });
+        document.getElementById('btnCorrigirAuto').addEventListener('click', alternarLeitura);
         
         document.getElementById('btnGerenciarProvas').addEventListener('click', () => {
             renderizarListaProvas();
@@ -1328,6 +1181,7 @@
         });
         
         document.getElementById('btnSair').addEventListener('click', () => {
+            pararLeituraAutomatica();
             if (stream) stream.getTracks().forEach(t => t.stop());
             localStorage.clear();
             window.location.href = 'index.html';
