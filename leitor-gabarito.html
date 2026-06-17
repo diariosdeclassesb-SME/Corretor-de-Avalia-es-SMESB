@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Leitor de Gabarito - Compatível com Layout Real</title>
+    <title>Leitor de Gabarito - Câmera Fixa</title>
     <style>
         * {
             margin: 0;
@@ -13,36 +13,87 @@
         
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
-            min-height: 100vh;
             background: #000;
-            padding: 12px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
         
-        .container {
-            max-width: 500px;
-            margin: auto;
-            position: relative;
+        /* Área superior FIXA - câmera sempre visível */
+        .camera-section {
+            flex-shrink: 0;
+            background: #000;
+            padding: 8px 12px 0 12px;
+            border-bottom: 2px solid #333;
         }
         
         .header {
             background: linear-gradient(135deg, #1a73e8, #0d47a1);
-            padding: 12px;
-            border-radius: 16px;
+            padding: 8px;
+            border-radius: 12px;
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
         
         .header h1 {
-            font-size: 1rem;
+            font-size: 0.9rem;
             color: white;
+        }
+        
+        .info-usuario, .info-prova {
+            background: rgba(44, 44, 44, 0.95);
+            padding: 5px 8px;
+            border-radius: 10px;
+            margin-bottom: 5px;
+            font-size: 0.65rem;
+            text-align: center;
+            color: white;
+        }
+        
+        .info-gabarito {
+            padding: 4px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 5px;
+            font-size: 0.65rem;
+        }
+        
+        .info-gabarito.carregado {
+            background: rgba(76, 175, 80, 0.9);
+        }
+        
+        .info-gabarito.nao-carregado {
+            background: rgba(255, 68, 68, 0.9);
+        }
+        
+        .status-alinhamento {
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            padding: 6px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 0.7rem;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+        
+        .status-alinhamento.good {
+            background: rgba(0, 100, 0, 0.9);
+            color: #00ff00;
+        }
+        
+        .status-alinhamento.warning {
+            background: rgba(100, 60, 0, 0.9);
+            color: #ffaa00;
         }
         
         .camera-container {
             position: relative;
             background: #000;
-            border-radius: 16px;
+            border-radius: 12px;
             overflow: hidden;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             aspect-ratio: 3 / 4;
             border: 2px solid rgba(255,255,255,0.2);
         }
@@ -63,87 +114,110 @@
             pointer-events: none;
         }
         
-        .status-alinhamento {
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
+        .btn-corrigir-auto {
+            background: #1a73e8;
+            color: white;
             padding: 10px;
-            border-radius: 12px;
-            text-align: center;
+            font-size: 0.85rem;
+            border-radius: 25px;
+            margin: 4px 0;
+        }
+        
+        .btn-corrigir-auto.ativo {
+            background: #f44336;
+        }
+        
+        .row-buttons {
+            display: flex;
+            gap: 8px;
+            margin: 4px 0;
+        }
+        
+        .row-buttons button {
+            flex: 1;
+            padding: 8px;
             font-size: 0.75rem;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-        
-        .status-alinhamento.good {
-            background: rgba(0, 100, 0, 0.9);
-            color: #00ff00;
-        }
-        
-        .status-alinhamento.warning {
-            background: rgba(100, 60, 0, 0.9);
-            color: #ffaa00;
+            border-radius: 20px;
         }
         
         button {
-            width: 100%;
-            padding: 12px;
-            font-size: 0.85rem;
-            font-weight: bold;
             border: none;
-            border-radius: 25px;
-            margin: 5px 0;
             cursor: pointer;
             transition: all 0.2s;
+            font-weight: bold;
         }
         
         button:active {
             transform: scale(0.98);
         }
         
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .btn-gabarito { background: #3c39f5; color: white; padding: 8px; font-size: 0.75rem; border-radius: 20px; margin: 4px 0; }
+        .btn-sair { background: #dc3545; color: white; padding: 8px; font-size: 0.75rem; border-radius: 20px; margin: 4px 0; }
+        .btn-provas { background: #4caf50; color: white; }
+        
+        .slider-container {
+            background: #333;
+            padding: 6px 8px;
+            border-radius: 10px;
+            margin: 4px 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
         }
         
-        .btn-corrigir-auto { background: #1a73e8; color: white; }
-        .btn-gabarito { background: #3c39f5; color: white; }
-        .btn-provas { background: #4caf50; color: white; }
-        .btn-sair { background: #dc3545; color: white; }
+        .slider-container label {
+            color: white;
+            font-size: 0.6rem;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            min-width: 100px;
+        }
+        
+        /* Área de resultados ROLÁVEL */
+        .resultados-section {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 12px 12px 12px;
+            background: #0a0a0a;
+        }
         
         .resultado-preview {
             background: rgba(30, 30, 30, 0.95);
-            backdrop-filter: blur(10px);
             border-radius: 16px;
-            padding: 12px;
-            margin-top: 12px;
+            padding: 10px;
         }
         
         .acertos-tempo-real {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             color: #4caf50;
             text-align: center;
             font-weight: bold;
         }
         
         .nota-tempo-real {
-            font-size: 1rem;
+            font-size: 0.9rem;
             text-align: center;
+            margin-bottom: 8px;
         }
         
         .respostas-grid {
-            max-height: 150px;
-            overflow-y: auto;
             display: grid;
             grid-template-columns: repeat(10, 1fr);
-            gap: 2px;
-            margin-top: 10px;
+            gap: 3px;
+            margin-top: 8px;
+            max-height: 250px;
+            overflow-y: auto;
         }
         
         .resposta-item {
-            padding: 2px;
-            border-radius: 3px;
+            padding: 4px 2px;
+            border-radius: 4px;
             text-align: center;
             font-size: 0.55rem;
+            font-weight: bold;
         }
         
         .resposta-certa {
@@ -158,42 +232,17 @@
             background: #555;
         }
         
-        .info-usuario, .info-prova {
-            background: rgba(44, 44, 44, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 8px;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            font-size: 0.7rem;
+        .instrucao {
+            background: rgba(0,0,0,0.6);
+            padding: 4px;
+            border-radius: 8px;
+            font-size: 0.55rem;
             text-align: center;
-            color: white;
+            color: #ffaa00;
+            margin-bottom: 4px;
         }
         
-        .info-gabarito {
-            padding: 6px;
-            border-radius: 10px;
-            text-align: center;
-            margin-bottom: 8px;
-            font-size: 0.7rem;
-        }
-        
-        .info-gabarito.carregado {
-            background: rgba(76, 175, 80, 0.9);
-        }
-        
-        .info-gabarito.nao-carregado {
-            background: rgba(255, 68, 68, 0.9);
-        }
-        
-        .row-buttons {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .row-buttons button {
-            flex: 1;
-        }
-        
+        /* Modais (mantidos) */
         .modal {
             display: none;
             position: fixed;
@@ -287,12 +336,14 @@
         .modal-buttons button {
             flex: 1;
             margin: 0;
+            padding: 10px;
+            border-radius: 20px;
         }
         
         .btn-salvar-gabarito { background: #4caf50; color: white; }
         .btn-fechar-modal { background: #666; color: white; }
-        .btn-reset { background: #ff4444; color: white; margin-top: 10px; }
-        .btn-nova-prova { background: #4caf50; color: white; margin-bottom: 12px; }
+        .btn-reset { background: #ff4444; color: white; margin-top: 10px; padding: 10px; border-radius: 20px; }
+        .btn-nova-prova { background: #4caf50; color: white; margin-bottom: 12px; padding: 10px; border-radius: 20px; }
         
         .lista-provas {
             max-height: 300px;
@@ -330,58 +381,38 @@
             gap: 8px;
         }
         
-        .btn-editar-prova {
-            background: #2196f3;
-            padding: 5px 8px;
-            font-size: 0.65rem;
-            margin: 0;
-            width: auto;
+        .btn-editar-prova, .btn-excluir-prova {
+            padding: 5px 10px;
+            font-size: 0.7rem;
+            border-radius: 15px;
         }
         
-        .btn-excluir-prova {
-            background: #ff4444;
-            padding: 5px 8px;
-            font-size: 0.65rem;
-            margin: 0;
-            width: auto;
+        .btn-editar-prova { background: #2196f3; color: white; }
+        .btn-excluir-prova { background: #ff4444; color: white; }
+        
+        .badge {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
         }
         
-        .slider-container {
-            background: #333;
-            padding: 8px;
-            border-radius: 12px;
-            margin-top: 10px;
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
         
-        .slider-container label {
-            color: white;
-            font-size: 0.65rem;
-        }
-        
-        input[type="range"] {
-            width: 100%;
-            margin: 5px 0;
-        }
-        
-        .btn-corrigir-auto.ativo {
-            background: #f44336;
-        }
-        
-        .instrucao {
-            background: rgba(0,0,0,0.6);
-            padding: 5px;
-            border-radius: 8px;
-            font-size: 0.6rem;
-            text-align: center;
-            color: #ffaa00;
-            margin-bottom: 5px;
+        .gravando {
+            animation: pulse 1s infinite;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Área FIXA da câmera -->
+    <div class="camera-section">
         <div class="header">
-            <h1>📸 Leitor de Gabarito - SME/SB</h1>
+            <h1>📸 Leitor de Gabarito</h1>
         </div>
         
         <div class="info-usuario" id="infoUsuario">Carregando...</div>
@@ -392,8 +423,8 @@
             🟡 Aguardando câmera...
         </div>
         
-        <div class="instrucao" id="instrucao">
-            💡 Enquadre a folha de respostas. A grade VERMELHA deve ficar sobre os círculos!
+        <div class="instrucao">
+            💡 Alinhe a grade VERMELHA com as 3 colunas da folha
         </div>
         
         <div class="camera-container">
@@ -401,23 +432,26 @@
             <canvas id="overlayCanvas"></canvas>
         </div>
         
+        <button class="btn-corrigir-auto" id="btnCorrigirAuto" disabled>🎯 Iniciar Leitura Automática</button>
+        
         <div class="row-buttons">
             <button class="btn-provas" id="btnGerenciarProvas">📚 Provas</button>
-            <button class="btn-corrigir-auto" id="btnCorrigirAuto">🎯 Iniciar Leitura</button>
+            <button class="btn-gabarito" id="btnAbrirGabarito" disabled>📝 Gabarito</button>
+            <button class="btn-sair" id="btnSair">🚪 Sair</button>
         </div>
         
-        <button class="btn-gabarito" id="btnAbrirGabarito" disabled>📝 Editar Gabarito</button>
-        <button class="btn-sair" id="btnSair">🚪 Sair</button>
-        
         <div class="slider-container">
-            <label>🔧 Limiar (quanto menor, mais sensível):</label>
+            <label>🔧 Limiar:</label>
             <input type="range" id="limiarSlider" min="30" max="150" value="80">
             <span id="limiarValue" style="color:white;">80</span>
-            <label style="display:block; margin-top:5px;">📊 Sensibilidade:</label>
+            <label>🎯 Sensib.:</label>
             <input type="range" id="sensibilidadeSlider" min="0.10" max="0.50" step="0.01" value="0.22">
             <span id="sensibilidadeValue" style="color:white;">0.22</span>
         </div>
-        
+    </div>
+    
+    <!-- Área ROLÁVEL de resultados -->
+    <div class="resultados-section">
         <div class="resultado-preview" id="resultadoPreview" style="display: none;">
             <div class="acertos-tempo-real" id="acertosTempoReal">- / -</div>
             <div class="nota-tempo-real" id="notaTempoReal">🎓 NOTA: -</div>
@@ -425,7 +459,7 @@
         </div>
     </div>
     
-    <!-- Modais (mesmo código anterior, omitido por brevidade) -->
+    <!-- Modais -->
     <div id="modalProvas" class="modal">
         <div class="modal-content">
             <h2>📚 Minhas Provas</h2>
@@ -440,7 +474,7 @@
             <h2 id="modalEditarTitulo">📝 Criar Nova Prova</h2>
             <div class="config-item">
                 <label>📛 Nome da prova:</label>
-                <input type="text" id="provaNome" placeholder="Ex: Prova 1 - Matemática">
+                <input type="text" id="provaNome" placeholder="Ex: Prova 1">
             </div>
             <div class="config-item">
                 <label>📊 Quantidade de questões:</label>
@@ -469,7 +503,7 @@
                 <button id="btnSalvarGabarito" class="btn-salvar-gabarito">💾 Salvar</button>
                 <button id="btnFecharGabarito" class="btn-fechar-modal">Fechar</button>
             </div>
-            <button id="btnResetGabarito" class="btn-reset">🔄 Resetar</button>
+            <button id="btnResetGabarito" class="btn-reset">🔄 Resetar Gabarito</button>
         </div>
     </div>
     
@@ -481,145 +515,70 @@
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Layout real: 20 linhas × 3 colunas = 60 questões
+        // Layout: 20 linhas × 3 colunas = 60 questões
         const LINHAS_QUESTOES = 20;
         const COLUNAS_QUESTOES = 3;
         
-        let provas = [];
-        let provaAtual = null;
-        let NUM_QUESTOES = 60;
-        let NUM_OPCOES = 5;
-        let OPCOES = ['A', 'B', 'C', 'D', 'E'];
-        let gabarito = [];
-        
-        const usuarioId = localStorage.getItem('usuario_id');
-        const usuarioNome = localStorage.getItem('usuario_nome');
-        
-        if (!usuarioId) {
-            alert('⚠️ Faça login primeiro!');
-            window.location.href = 'index.html';
-        }
-        
+        let provas = [], provaAtual = null, NUM_QUESTOES = 60, NUM_OPCOES = 5, OPCOES = ['A','B','C','D','E'], gabarito = [];
+        const usuarioId = localStorage.getItem('usuario_id'), usuarioNome = localStorage.getItem('usuario_nome');
+        if (!usuarioId) { alert('⚠️ Faça login!'); window.location.href = 'index.html'; }
         document.getElementById('infoUsuario').innerHTML = `👨‍🏫 ${usuarioNome || 'Professor'}`;
         
-        // Elementos
-        const video = document.getElementById('video');
-        const overlayCanvas = document.getElementById('overlayCanvas');
-        const statusAlinhamento = document.getElementById('statusAlinhamento');
-        const limiarSlider = document.getElementById('limiarSlider');
-        const limiarValue = document.getElementById('limiarValue');
-        const sensibilidadeSlider = document.getElementById('sensibilidadeSlider');
-        const sensibilidadeValue = document.getElementById('sensibilidadeValue');
+        const video = document.getElementById('video'), overlayCanvas = document.getElementById('overlayCanvas'), statusAlinhamento = document.getElementById('statusAlinhamento');
+        const limiarSlider = document.getElementById('limiarSlider'), limiarValue = document.getElementById('limiarValue');
+        const sensibilidadeSlider = document.getElementById('sensibilidadeSlider'), sensibilidadeValue = document.getElementById('sensibilidadeValue');
         
-        let stream = null;
-        let limiarDetecao = 80;
-        let sensibilidadeCirculo = 0.22;
-        let leituraAtiva = false;
-        let frameInterval = null;
+        let stream = null, limiarDetecao = 80, sensibilidadeCirculo = 0.22, leituraAtiva = false, frameInterval = null;
         
-        limiarSlider.addEventListener('input', (e) => {
-            limiarDetecao = parseInt(e.target.value);
-            limiarValue.textContent = limiarDetecao;
-        });
+        limiarSlider.addEventListener('input', (e) => { limiarDetecao = parseInt(e.target.value); limiarValue.textContent = limiarDetecao; });
+        sensibilidadeSlider.addEventListener('input', (e) => { sensibilidadeCirculo = parseFloat(e.target.value); sensibilidadeValue.textContent = sensibilidadeCirculo; });
         
-        sensibilidadeSlider.addEventListener('input', (e) => {
-            sensibilidadeCirculo = parseFloat(e.target.value);
-            sensibilidadeValue.textContent = sensibilidadeCirculo;
-        });
-        
-        // ========== FUNÇÕES SUPABASE (simplificadas) ==========
+        // ========== SUPABASE FUNCTIONS ==========
         async function garantirUsuarioExistente() {
-            const { data: existe } = await supabaseClient
-                .from('usuarios')
-                .select('id')
-                .eq('id', usuarioId)
-                .maybeSingle();
-            
-            if (!existe) {
-                await supabaseClient.from('usuarios').insert([{
-                    id: usuarioId,
-                    nome: usuarioNome || 'Professor',
-                    email: localStorage.getItem('usuario_email') || '',
-                    criado_em: new Date().toISOString()
-                }]);
-            }
+            const { data: existe } = await supabaseClient.from('usuarios').select('id').eq('id', usuarioId).maybeSingle();
+            if (!existe) await supabaseClient.from('usuarios').insert([{ id: usuarioId, nome: usuarioNome || 'Professor', email: localStorage.getItem('usuario_email') || '', criado_em: new Date().toISOString() }]);
         }
         
         async function carregarProvasDoSupabase() {
             try {
-                const { data, error } = await supabaseClient
-                    .from('provas')
-                    .select('*')
-                    .eq('usuario_id', usuarioId)
-                    .order('criado_em', { ascending: false });
-                
+                const { data, error } = await supabaseClient.from('provas').select('*').eq('usuario_id', usuarioId).order('criado_em', { ascending: false });
                 if (error) throw error;
-                
                 provas = data || [];
                 renderizarListaProvas();
-                
-                if (provas.length === 0) {
-                    document.getElementById('infoProva').innerHTML = '📋 Nenhuma prova';
-                } else if (!provaAtual) {
-                    await selecionarProva(provas[0].id);
-                }
-            } catch (err) {
-                console.error(err);
-            }
+                if (provas.length === 0) document.getElementById('infoProva').innerHTML = '📋 Nenhuma prova';
+                else if (!provaAtual) await selecionarProva(provas[0].id);
+            } catch (err) { console.error(err); }
         }
         
         async function selecionarProva(provaId) {
             try {
-                const { data, error } = await supabaseClient
-                    .from('provas')
-                    .select('*')
-                    .eq('id', provaId)
-                    .single();
-                
+                const { data, error } = await supabaseClient.from('provas').select('*').eq('id', provaId).single();
                 if (error) throw error;
-                
                 provaAtual = data;
                 NUM_QUESTOES = data.num_questoes;
                 NUM_OPCOES = data.opcoes_por_questao;
                 OPCOES = Array(NUM_OPCOES).fill().map((_, i) => String.fromCharCode(65 + i));
                 gabarito = [...data.gabarito];
-                
-                document.getElementById('infoProva').innerHTML = `📋 ${provaAtual.nome_prova} (${NUM_QUESTOES}q)`;
+                document.getElementById('infoProva').innerHTML = `📋 ${provaAtual.nome_prova} (${NUM_QUESTOES}q | ${NUM_OPCOES}op)`;
                 document.getElementById('infoGabarito').innerHTML = `✅ Gabarito carregado!`;
                 document.getElementById('infoGabarito').className = 'info-gabarito carregado';
                 document.getElementById('btnAbrirGabarito').disabled = false;
                 document.getElementById('modalProvas').style.display = 'none';
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) { console.error(err); }
         }
         
         async function salvarProva(nome, numQuestoes, numOpcoes, editId = null) {
             const opcoes = Array(numOpcoes).fill().map((_, i) => String.fromCharCode(65 + i));
             const novoGabarito = new Array(numQuestoes).fill(opcoes[0]);
-            
-            if (editId) {
-                await supabaseClient.from('provas').update({
-                    nome_prova: nome, num_questoes: numQuestoes,
-                    opcoes_por_questao: numOpcoes, gabarito: novoGabarito
-                }).eq('id', editId);
-            } else {
-                await supabaseClient.from('provas').insert([{
-                    usuario_id: usuarioId, nome_prova: nome,
-                    num_questoes: numQuestoes, opcoes_por_questao: numOpcoes,
-                    gabarito: novoGabarito
-                }]);
-            }
+            if (editId) await supabaseClient.from('provas').update({ nome_prova: nome, num_questoes: numQuestoes, opcoes_por_questao: numOpcoes, gabarito: novoGabarito }).eq('id', editId);
+            else await supabaseClient.from('provas').insert([{ usuario_id: usuarioId, nome_prova: nome, num_questoes: numQuestoes, opcoes_por_questao: numOpcoes, gabarito: novoGabarito }]);
             await carregarProvasDoSupabase();
         }
         
         async function excluirProva(provaId) {
             if (!confirm('Excluir esta prova?')) return;
             await supabaseClient.from('provas').delete().eq('id', provaId);
-            if (provaAtual && provaAtual.id === provaId) {
-                provaAtual = null;
-                document.getElementById('btnAbrirGabarito').disabled = true;
-            }
+            if (provaAtual && provaAtual.id === provaId) { provaAtual = null; document.getElementById('btnAbrirGabarito').disabled = true; }
             await carregarProvasDoSupabase();
         }
         
@@ -632,53 +591,11 @@
         
         function renderizarListaProvas() {
             const container = document.getElementById('listaProvas');
-            if (provas.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Nenhuma prova</div>';
-                return;
-            }
-            container.innerHTML = provas.map(prova => `
-                <div class="prova-item" data-id="${prova.id}">
-                    <div class="prova-info">
-                        <div class="prova-nome">${prova.nome_prova}</div>
-                        <div class="prova-detalhes">${prova.num_questoes} questões</div>
-                    </div>
-                    <div class="prova-acoes">
-                        <button class="btn-editar-prova" data-id="${prova.id}">✏️</button>
-                        <button class="btn-excluir-prova" data-id="${prova.id}">🗑️</button>
-                    </div>
-                </div>
-            `).join('');
-            
-            document.querySelectorAll('.prova-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    if (!e.target.classList.contains('btn-editar-prova') && !e.target.classList.contains('btn-excluir-prova')) {
-                        selecionarProva(item.dataset.id);
-                    }
-                });
-            });
-            
-            document.querySelectorAll('.btn-editar-prova').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const prova = provas.find(p => p.id == btn.dataset.id);
-                    if (prova) {
-                        document.getElementById('provaNome').value = prova.nome_prova;
-                        document.getElementById('provaNumQuestoes').value = prova.num_questoes;
-                        document.getElementById('provaNumOpcoes').value = prova.opcoes_por_questao;
-                        document.getElementById('modalEditarTitulo').innerHTML = '✏️ Editar Prova';
-                        document.getElementById('modalEditarProva').dataset.editId = prova.id;
-                        document.getElementById('modalEditarProva').style.display = 'block';
-                        document.getElementById('modalProvas').style.display = 'none';
-                    }
-                });
-            });
-            
-            document.querySelectorAll('.btn-excluir-prova').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    await excluirProva(btn.dataset.id);
-                });
-            });
+            if (provas.length === 0) { container.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Nenhuma prova</div>'; return; }
+            container.innerHTML = provas.map(prova => `<div class="prova-item" data-id="${prova.id}"><div class="prova-info"><div class="prova-nome">${prova.nome_prova}</div><div class="prova-detalhes">${prova.num_questoes} questões | ${prova.opcoes_por_questao} opções</div></div><div class="prova-acoes"><button class="btn-editar-prova" data-id="${prova.id}">✏️</button><button class="btn-excluir-prova" data-id="${prova.id}">🗑️</button></div></div>`).join('');
+            document.querySelectorAll('.prova-item').forEach(item => { item.addEventListener('click', (e) => { if (!e.target.classList.contains('btn-editar-prova') && !e.target.classList.contains('btn-excluir-prova')) selecionarProva(item.dataset.id); }); });
+            document.querySelectorAll('.btn-editar-prova').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); const prova = provas.find(p => p.id == btn.dataset.id); if (prova) { document.getElementById('provaNome').value = prova.nome_prova; document.getElementById('provaNumQuestoes').value = prova.num_questoes; document.getElementById('provaNumOpcoes').value = prova.opcoes_por_questao; document.getElementById('modalEditarTitulo').innerHTML = '✏️ Editar Prova'; document.getElementById('modalEditarProva').dataset.editId = prova.id; document.getElementById('modalEditarProva').style.display = 'block'; document.getElementById('modalProvas').style.display = 'none'; } }); });
+            document.querySelectorAll('.btn-excluir-prova').forEach(btn => { btn.addEventListener('click', async (e) => { e.stopPropagation(); await excluirProva(btn.dataset.id); }); });
         }
         
         function renderizarModalGabarito() {
@@ -687,41 +604,25 @@
             for (let i = 0; i < NUM_QUESTOES; i++) {
                 const div = document.createElement('div');
                 div.className = 'gab-item';
-                div.innerHTML = `<label>Q${i+1}</label>
-                    <select id="gabSelect_${i}" data-questao="${i}">
-                        ${OPCOES.map(op => `<option value="${op}" ${gabarito[i] === op ? 'selected' : ''}>${op}</option>`).join('')}
-                    </select>`;
+                div.innerHTML = `<label>Q${i+1}</label><select id="gabSelect_${i}" data-questao="${i}">${OPCOES.map(op => `<option value="${op}" ${gabarito[i] === op ? 'selected' : ''}>${op}</option>`).join('')}</select>`;
                 container.appendChild(div);
             }
-            for (let i = 0; i < NUM_QUESTOES; i++) {
-                document.getElementById(`gabSelect_${i}`)?.addEventListener('change', (e) => {
-                    gabarito[parseInt(e.target.dataset.questao)] = e.target.value;
-                });
-            }
+            for (let i = 0; i < NUM_QUESTOES; i++) document.getElementById(`gabSelect_${i}`)?.addEventListener('change', (e) => { gabarito[parseInt(e.target.dataset.questao)] = e.target.value; });
         }
         
-        // ========== CÂMERA E DETECÇÃO ==========
+        // ========== CÂMERA ==========
         async function iniciarCamera() {
             if (stream) stream.getTracks().forEach(track => track.stop());
             statusAlinhamento.innerHTML = '📷 Solicitando câmera...';
-            
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { exact: "environment" }, width: { ideal: 1080 }, height: { ideal: 1920 } }
-                });
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" }, width: { ideal: 1080 }, height: { ideal: 1920 } } });
                 video.srcObject = stream;
                 await new Promise(resolve => { video.onloadedmetadata = () => { video.play(); resolve(); }; });
-                statusAlinhamento.innerHTML = '🟡 Enquadre a folha - a grade VERMELHA deve ficar sobre os círculos';
+                statusAlinhamento.innerHTML = '🟡 Alinhe a grade VERMELHA com as 3 colunas da folha';
                 document.getElementById('btnCorrigirAuto').disabled = false;
             } catch (err) {
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    video.srcObject = stream;
-                    await video.play();
-                    statusAlinhamento.innerHTML = '🟡 Enquadre a folha';
-                } catch (e) {
-                    statusAlinhamento.innerHTML = '❌ Erro na câmera';
-                }
+                try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); video.srcObject = stream; await video.play(); statusAlinhamento.innerHTML = '🟡 Alinhe a grade'; } 
+                catch (e) { statusAlinhamento.innerHTML = '❌ Erro na câmera'; }
             }
         }
         
@@ -730,15 +631,13 @@
             leituraAtiva = true;
             document.getElementById('btnCorrigirAuto').innerHTML = '⏹️ Parar Leitura';
             document.getElementById('btnCorrigirAuto').classList.add('ativo');
-            frameInterval = setInterval(() => {
-                if (leituraAtiva && video.videoWidth > 0 && provaAtual) processarFrame();
-            }, 400);
+            frameInterval = setInterval(() => { if (leituraAtiva && video.videoWidth > 0 && provaAtual) processarFrame(); }, 350);
         }
         
         function pararLeitura() {
             if (frameInterval) clearInterval(frameInterval);
             leituraAtiva = false;
-            document.getElementById('btnCorrigirAuto').innerHTML = '🎯 Iniciar Leitura';
+            document.getElementById('btnCorrigirAuto').innerHTML = '🎯 Iniciar Leitura Automática';
             document.getElementById('btnCorrigirAuto').classList.remove('ativo');
             const ctx = overlayCanvas.getContext('2d');
             if (ctx) ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
@@ -747,14 +646,11 @@
         function processarFrame() {
             if (!provaAtual || !video.videoWidth) return;
             
-            // Captura o frame
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = video.videoWidth;
             tempCanvas.height = video.videoHeight;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            tempCanvas.getContext('2d').drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
             
-            // Reduz para processamento
             const targetWidth = 900;
             const scale = targetWidth / tempCanvas.width;
             const targetHeight = Math.floor(tempCanvas.height * scale);
@@ -765,7 +661,6 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(tempCanvas, 0, 0, targetWidth, targetHeight);
             
-            // Configura overlay
             overlayCanvas.width = targetWidth;
             overlayCanvas.height = targetHeight;
             const overlayCtx = overlayCanvas.getContext('2d');
@@ -773,44 +668,37 @@
             const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
             const dados = new Uint8ClampedArray(imageData.data);
             
-            // ÁREA DE DETECÇÃO - ajuste fino para o layout real
-            // Baseado no seu print: os círculos começam após o cabeçalho
-            const areaTopo = targetHeight * 0.20;      // Após o cabeçalho
-            const areaBaixo = targetHeight * 0.92;     // Antes do rodapé
-            const areaEsquerda = targetWidth * 0.05;   // Margem esquerda
-            const areaDireita = targetWidth * 0.95;    // Margem direita
+            // Área da folha
+            const topoFolha = targetHeight * 0.18;
+            const baseFolha = targetHeight * 0.92;
+            const esquerdaFolha = targetWidth * 0.04;
+            const direitaFolha = targetWidth * 0.96;
             
-            // Layout: 20 linhas × 3 colunas
-            const cellWidth = (areaDireita - areaEsquerda) / COLUNAS_QUESTOES;
-            const cellHeight = (areaBaixo - areaTopo) / LINHAS_QUESTOES;
-            
-            // Posição horizontal das 5 opções dentro de cada célula
-            const opcaoWidth = cellWidth / (NUM_OPCOES + 0.5);
-            const circleRadius = Math.min(cellWidth, cellHeight) * 0.12;
+            const larguraColuna = (direitaFolha - esquerdaFolha) / COLUNAS_QUESTOES;
+            const alturaLinha = (baseFolha - topoFolha) / LINHAS_QUESTOES;
+            const circleRadius = Math.min(larguraColuna, alturaLinha) * 0.11;
+            const opcaoStartX = larguraColuna * 0.22;
+            const espacamentoOpcoes = larguraColuna * 0.16;
             
             overlayCtx.clearRect(0, 0, targetWidth, targetHeight);
             overlayCtx.globalAlpha = 0.85;
             
-            // Desenha a área de detecção (VERMELHO para destaque)
+            // Desenha as 3 colunas (VERMELHO)
             overlayCtx.strokeStyle = '#ff0000';
             overlayCtx.lineWidth = 3;
-            overlayCtx.strokeRect(areaEsquerda, areaTopo, areaDireita - areaEsquerda, areaBaixo - areaTopo);
+            for (let col = 0; col < COLUNAS_QUESTOES; col++) {
+                const colX = esquerdaFolha + col * larguraColuna;
+                overlayCtx.strokeRect(colX, topoFolha, larguraColuna, baseFolha - topoFolha);
+            }
             
-            // Desenha a grade
+            // Linhas horizontais
             overlayCtx.strokeStyle = '#ff6666';
             overlayCtx.lineWidth = 1;
-            for (let i = 1; i < COLUNAS_QUESTOES; i++) {
-                const x = areaEsquerda + i * cellWidth;
+            for (let linha = 1; linha < LINHAS_QUESTOES; linha++) {
+                const y = topoFolha + linha * alturaLinha;
                 overlayCtx.beginPath();
-                overlayCtx.moveTo(x, areaTopo);
-                overlayCtx.lineTo(x, areaBaixo);
-                overlayCtx.stroke();
-            }
-            for (let i = 1; i < LINHAS_QUESTOES; i++) {
-                const y = areaTopo + i * cellHeight;
-                overlayCtx.beginPath();
-                overlayCtx.moveTo(areaEsquerda, y);
-                overlayCtx.lineTo(areaDireita, y);
+                overlayCtx.moveTo(esquerdaFolha, y);
+                overlayCtx.lineTo(direitaFolha, y);
                 overlayCtx.stroke();
             }
             
@@ -840,20 +728,20 @@
             let questaoIndex = 0;
             
             for (let linha = 0; linha < LINHAS_QUESTOES; linha++) {
-                for (let coluna = 0; coluna < COLUNAS_QUESTOES; coluna++) {
+                const cellY = topoFolha + linha * alturaLinha;
+                const cellCenterY = cellY + alturaLinha / 2;
+                
+                for (let col = 0; col < COLUNAS_QUESTOES; col++) {
                     if (questaoIndex >= NUM_QUESTOES) break;
                     
-                    const cellX = areaEsquerda + coluna * cellWidth;
-                    const cellY = areaTopo + linha * cellHeight;
-                    const cellCenterX = cellX + cellWidth / 2;
-                    const cellCenterY = cellY + cellHeight / 2;
+                    const colX = esquerdaFolha + col * larguraColuna;
                     
                     let melhorOpcao = -1;
                     let maiorPreenchimento = 0;
                     let totalPreenchidas = 0;
                     
                     for (let opt = 0; opt < NUM_OPCOES; opt++) {
-                        const opcaoX = cellX + (opt + 0.8) * opcaoWidth;
+                        const opcaoX = colX + opcaoStartX + (opt * espacamentoOpcoes);
                         const opcaoY = cellCenterY;
                         
                         const preenchimento = calcularPreenchimento(opcaoX, opcaoY, circleRadius);
@@ -875,29 +763,29 @@
                         }
                         overlayCtx.stroke();
                         
-                        overlayCtx.font = `${Math.max(9, circleRadius)}px Arial`;
+                        overlayCtx.font = `${Math.max(7, circleRadius)}px Arial`;
                         overlayCtx.fillStyle = 'white';
-                        overlayCtx.fillText(OPCOES[opt], opcaoX - 5, opcaoY + 5);
+                        overlayCtx.fillText(OPCOES[opt], opcaoX - 4, opcaoY + 4);
                     }
                     
                     // Número da questão
-                    overlayCtx.font = `bold ${Math.max(10, circleRadius + 2)}px Arial`;
+                    overlayCtx.font = `bold ${Math.max(8, circleRadius + 2)}px Arial`;
                     overlayCtx.fillStyle = '#ffff00';
-                    overlayCtx.fillText(`${questaoIndex+1}`, cellX + 3, cellY + 15);
+                    overlayCtx.fillText(`${questaoIndex+1}`, colX + 5, cellY + 15);
                     
                     if (melhorOpcao >= 0 && totalPreenchidas === 1) {
                         respostas.push(OPCOES[melhorOpcao]);
                         questoesDetectadas++;
                         overlayCtx.fillStyle = 'rgba(0,255,0,0.15)';
-                        overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
+                        overlayCtx.fillRect(colX, cellY, larguraColuna, alturaLinha);
                     } else if (totalPreenchidas > 1) {
                         respostas.push(null);
                         overlayCtx.fillStyle = 'rgba(255,255,0,0.15)';
-                        overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
+                        overlayCtx.fillRect(colX, cellY, larguraColuna, alturaLinha);
                     } else {
                         respostas.push(null);
                         overlayCtx.fillStyle = 'rgba(255,0,0,0.1)';
-                        overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
+                        overlayCtx.fillRect(colX, cellY, larguraColuna, alturaLinha);
                     }
                     
                     questaoIndex++;
@@ -905,7 +793,7 @@
                 if (questaoIndex >= NUM_QUESTOES) break;
             }
             
-            // Atualiza interface com resultados
+            // Calcula e exibe resultados
             let acertos = 0;
             const detalhes = [];
             for (let i = 0; i < NUM_QUESTOES; i++) {
@@ -926,96 +814,34 @@
             document.getElementById('notaTempoReal').innerHTML = `🎓 NOTA: ${nota.toFixed(1)}`;
             
             const grid = document.getElementById('respostasGrid');
-            grid.innerHTML = detalhes.map(d => `
-                <div class="resposta-item ${d.aluno === '⚪' ? 'resposta-nao-detectada' : (d.certo ? 'resposta-certa' : 'resposta-errada')}">
-                    ${d.num}<br>${d.aluno}
-                </div>
-            `).join('');
+            grid.innerHTML = detalhes.map(d => `<div class="resposta-item ${d.aluno === '⚪' ? 'resposta-nao-detectada' : (d.certo ? 'resposta-certa' : 'resposta-errada')}">${d.num}<br>${d.aluno}</div>`).join('');
             
-            // Feedback
+            // Feedback visual
             if (questoesDetectadas > NUM_QUESTOES * 0.8) {
                 statusAlinhamento.innerHTML = `✅ Excelente! ${questoesDetectadas}/60 detectadas`;
                 statusAlinhamento.className = 'status-alinhamento good';
-            } else if (questoesDetectadas > 30) {
-                statusAlinhamento.innerHTML = `🟡 ${questoesDetectadas}/60 - Ajuste o enquadramento`;
+            } else if (questoesDetectadas > 35) {
+                statusAlinhamento.innerHTML = `🟡 ${questoesDetectadas}/60 - Ajuste o alinhamento`;
                 statusAlinhamento.className = 'status-alinhamento warning';
             } else {
-                statusAlinhamento.innerHTML = `🔴 ${questoesDetectadas}/60 - A grade VERMELHA deve ficar sobre os círculos!`;
+                statusAlinhamento.innerHTML = `🔴 ${questoesDetectadas}/60 - Alinhe as 3 colunas dentro das caixas VERMELHAS`;
                 statusAlinhamento.className = '';
             }
         }
         
         // ========== EVENTOS ==========
-        document.getElementById('btnCorrigirAuto').addEventListener('click', () => {
-            if (leituraAtiva) pararLeitura();
-            else iniciarLeitura();
-        });
-        
-        document.getElementById('btnGerenciarProvas').addEventListener('click', () => {
-            renderizarListaProvas();
-            document.getElementById('modalProvas').style.display = 'block';
-        });
-        
-        document.getElementById('btnNovaProva').addEventListener('click', () => {
-            document.getElementById('provaNome').value = '';
-            document.getElementById('provaNumQuestoes').value = 60;
-            document.getElementById('provaNumOpcoes').value = 5;
-            document.getElementById('modalEditarTitulo').innerHTML = '📝 Criar Prova';
-            delete document.getElementById('modalEditarProva').dataset.editId;
-            document.getElementById('modalEditarProva').style.display = 'block';
-            document.getElementById('modalProvas').style.display = 'none';
-        });
-        
-        document.getElementById('btnCriarProva').addEventListener('click', async () => {
-            const nome = document.getElementById('provaNome').value.trim();
-            const numQuestoes = parseInt(document.getElementById('provaNumQuestoes').value);
-            const numOpcoes = parseInt(document.getElementById('provaNumOpcoes').value);
-            if (!nome) { alert('Digite um nome!'); return; }
-            const editId = document.getElementById('modalEditarProva').dataset.editId;
-            await salvarProva(nome, numQuestoes, numOpcoes, editId);
-            document.getElementById('modalEditarProva').style.display = 'none';
-            alert(`✅ Prova "${nome}" salva!`);
-        });
-        
-        document.getElementById('btnFecharProvas').addEventListener('click', () => {
-            document.getElementById('modalProvas').style.display = 'none';
-        });
-        
-        document.getElementById('btnCancelarEdicao').addEventListener('click', () => {
-            document.getElementById('modalEditarProva').style.display = 'none';
-        });
-        
-        document.getElementById('btnAbrirGabarito').addEventListener('click', () => {
-            if (!provaAtual) { alert('Selecione uma prova!'); return; }
-            renderizarModalGabarito();
-            document.getElementById('modalGabarito').style.display = 'block';
-        });
-        
-        document.getElementById('btnSalvarGabarito').addEventListener('click', async () => {
-            await salvarGabaritoProvaAtual();
-        });
-        
-        document.getElementById('btnFecharGabarito').addEventListener('click', () => {
-            document.getElementById('modalGabarito').style.display = 'none';
-        });
-        
-        document.getElementById('btnResetGabarito').addEventListener('click', () => {
-            if (confirm('Resetar gabarito?')) {
-                gabarito = new Array(NUM_QUESTOES).fill(OPCOES[0]);
-                renderizarModalGabarito();
-            }
-        });
-        
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
-        });
-        
-        document.getElementById('btnSair').addEventListener('click', () => {
-            pararLeitura();
-            if (stream) stream.getTracks().forEach(t => t.stop());
-            localStorage.clear();
-            window.location.href = 'index.html';
-        });
+        document.getElementById('btnCorrigirAuto').addEventListener('click', () => { if (leituraAtiva) pararLeitura(); else iniciarLeitura(); });
+        document.getElementById('btnGerenciarProvas').addEventListener('click', () => { renderizarListaProvas(); document.getElementById('modalProvas').style.display = 'block'; });
+        document.getElementById('btnNovaProva').addEventListener('click', () => { document.getElementById('provaNome').value = ''; document.getElementById('provaNumQuestoes').value = 60; document.getElementById('provaNumOpcoes').value = 5; document.getElementById('modalEditarTitulo').innerHTML = '📝 Criar Prova'; delete document.getElementById('modalEditarProva').dataset.editId; document.getElementById('modalEditarProva').style.display = 'block'; document.getElementById('modalProvas').style.display = 'none'; });
+        document.getElementById('btnCriarProva').addEventListener('click', async () => { const nome = document.getElementById('provaNome').value.trim(); const numQuestoes = parseInt(document.getElementById('provaNumQuestoes').value); const numOpcoes = parseInt(document.getElementById('provaNumOpcoes').value); if (!nome) { alert('Digite um nome!'); return; } const editId = document.getElementById('modalEditarProva').dataset.editId; await salvarProva(nome, numQuestoes, numOpcoes, editId); document.getElementById('modalEditarProva').style.display = 'none'; alert(`✅ Prova "${nome}" salva!`); });
+        document.getElementById('btnFecharProvas').addEventListener('click', () => { document.getElementById('modalProvas').style.display = 'none'; });
+        document.getElementById('btnCancelarEdicao').addEventListener('click', () => { document.getElementById('modalEditarProva').style.display = 'none'; });
+        document.getElementById('btnAbrirGabarito').addEventListener('click', () => { if (!provaAtual) { alert('Selecione uma prova!'); return; } renderizarModalGabarito(); document.getElementById('modalGabarito').style.display = 'block'; });
+        document.getElementById('btnSalvarGabarito').addEventListener('click', async () => { await salvarGabaritoProvaAtual(); });
+        document.getElementById('btnFecharGabarito').addEventListener('click', () => { document.getElementById('modalGabarito').style.display = 'none'; });
+        document.getElementById('btnResetGabarito').addEventListener('click', () => { if (confirm('Resetar gabarito?')) { gabarito = new Array(NUM_QUESTOES).fill(OPCOES[0]); renderizarModalGabarito(); } });
+        document.querySelectorAll('.modal').forEach(modal => { modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; }); });
+        document.getElementById('btnSair').addEventListener('click', () => { pararLeitura(); if (stream) stream.getTracks().forEach(t => t.stop()); localStorage.clear(); window.location.href = 'index.html'; });
         
         // Inicialização
         async function iniciar() {
@@ -1023,7 +849,6 @@
             await carregarProvasDoSupabase();
             iniciarCamera();
         }
-        
         iniciar();
     </script>
 </body>
