@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Leitor de Gabarito - Versão Ajustada</title>
+    <title>Leitor de Gabarito - 40 Questões</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -245,25 +245,26 @@
             color: #ffaa00;
             margin-bottom: 5px;
         }
-        .controle-zoom {
+        .ajuste-container {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             margin: 5px 0;
+            flex-wrap: wrap;
         }
-        .controle-zoom button {
+        .ajuste-container button {
             flex: 1;
+            min-width: 60px;
             padding: 8px;
-            font-size: 0.75rem;
-            margin: 0;
+            font-size: 0.7rem;
+            margin: 2px;
             border-radius: 12px;
         }
-        .btn-zoom-in { background: #2196f3; color: white; }
-        .btn-zoom-out { background: #ff9800; color: white; }
-        .btn-reset-zoom { background: #666; color: white; }
-        #zoomInfo {
-            color: white;
+        .btn-ajuste { background: #2196f3; color: white; }
+        .btn-ajuste-reset { background: #666; color: white; }
+        #ajusteInfo {
+            color: #aaa;
             text-align: center;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             padding: 4px;
         }
     </style>
@@ -271,7 +272,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📸 Leitor de Gabarito - Versão Ajustada</h1>
+            <h1>📸 Leitor de Gabarito - 40 Questões</h1>
         </div>
         
         <div class="info-usuario" id="infoUsuario">Carregando...</div>
@@ -283,7 +284,7 @@
         </div>
         
         <div class="instrucao" id="instrucao">
-            💡 Posicione a câmera paralelamente à folha. Ajuste o ZOOM se necessário.
+            💡 Alinhe a grade VERMELHA sobre os círculos da folha
         </div>
         
         <div class="camera-container">
@@ -291,12 +292,14 @@
             <canvas id="overlayCanvas"></canvas>
         </div>
         
-        <div class="controle-zoom">
-            <button class="btn-zoom-out" id="btnZoomOut">🔍-</button>
-            <button class="btn-reset-zoom" id="btnResetZoom">⟲ Reset</button>
-            <button class="btn-zoom-in" id="btnZoomIn">🔍+</button>
+        <div class="ajuste-container">
+            <button class="btn-ajuste" id="btnMoverCima">⬆</button>
+            <button class="btn-ajuste" id="btnMoverBaixo">⬇</button>
+            <button class="btn-ajuste" id="btnMoverEsquerda">⬅</button>
+            <button class="btn-ajuste" id="btnMoverDireita">➡</button>
+            <button class="btn-ajuste-reset" id="btnResetAjuste">⟲ Reset</button>
         </div>
-        <div id="zoomInfo">Zoom: 1.0x</div>
+        <div id="ajusteInfo">Ajuste fino: X: 0 | Y: 0</div>
         
         <div class="row-buttons">
             <button class="btn-provas" id="btnGerenciarProvas">📚 Provas</button>
@@ -311,8 +314,8 @@
             <input type="range" id="limiarSlider" min="30" max="150" value="70">
             <span id="limiarValue" style="color:white;">70</span>
             <label style="display:block; margin-top:5px;">📊 Sensibilidade (preenchimento mínimo):</label>
-            <input type="range" id="sensibilidadeSlider" min="0.10" max="0.50" step="0.01" value="0.18">
-            <span id="sensibilidadeValue" style="color:white;">0.18</span>
+            <input type="range" id="sensibilidadeSlider" min="0.08" max="0.40" step="0.01" value="0.15">
+            <span id="sensibilidadeValue" style="color:white;">0.15</span>
         </div>
         
         <div class="resultado-preview" id="resultadoPreview" style="display: none;">
@@ -341,14 +344,13 @@
             </div>
             <div class="config-item">
                 <label>📊 Quantidade de questões:</label>
-                <input type="number" id="provaNumQuestoes" min="10" max="100" step="5" value="60">
+                <input type="number" id="provaNumQuestoes" min="10" max="100" step="5" value="40">
             </div>
             <div class="config-item">
                 <label>🔤 Número de alternativas:</label>
                 <select id="provaNumOpcoes">
-                    <option value="4">4 opções (A, B, C, D)</option>
-                    <option value="5" selected>5 opções (A, B, C, D, E)</option>
-                    <option value="6">6 opções (A, B, C, D, E, F)</option>
+                    <option value="4" selected>4 opções (A, B, C, D)</option>
+                    <option value="5">5 opções (A, B, C, D, E)</option>
                 </select>
             </div>
             <div class="modal-buttons">
@@ -378,21 +380,21 @@
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Layout real: 20 linhas × 3 colunas = 60 questões
+        // Layout: 2 colunas × 20 linhas = 40 questões
         const LINHAS_QUESTOES = 20;
-        const COLUNAS_QUESTOES = 3;
+        const COLUNAS_QUESTOES = 2;
+        const NUM_OPCOES = 4;
+        const OPCOES = ['A', 'B', 'C', 'D'];
         
         let provas = [];
         let provaAtual = null;
-        let NUM_QUESTOES = 60;
-        let NUM_OPCOES = 5;
-        let OPCOES = ['A', 'B', 'C', 'D', 'E'];
+        let NUM_QUESTOES = 40;
         let gabarito = [];
         
-        // Zoom
-        let zoomLevel = 1.0;
-        const ZOOM_MIN = 0.7;
-        const ZOOM_MAX = 1.8;
+        // Ajustes manuais da grade
+        let ajusteX = 0;
+        let ajusteY = 0;
+        const PASSO_AJUSTE = 0.005; // Percentual da imagem
         
         const usuarioId = localStorage.getItem('usuario_id');
         const usuarioNome = localStorage.getItem('usuario_nome');
@@ -415,13 +417,9 @@
         
         let stream = null;
         let limiarDetecao = 70;
-        let sensibilidadeCirculo = 0.18;
+        let sensibilidadeCirculo = 0.15;
         let leituraAtiva = false;
         let frameInterval = null;
-        
-        // Ajustes de posição - valores calibrados para o layout da folha
-        let offsetX = 0;
-        let offsetY = 0;
         
         limiarSlider.addEventListener('input', (e) => {
             limiarDetecao = parseInt(e.target.value);
@@ -433,21 +431,33 @@
             sensibilidadeValue.textContent = sensibilidadeCirculo;
         });
         
-        // Controles de zoom
-        document.getElementById('btnZoomIn').addEventListener('click', () => {
-            zoomLevel = Math.min(zoomLevel + 0.05, ZOOM_MAX);
-            document.getElementById('zoomInfo').textContent = `Zoom: ${zoomLevel.toFixed(2)}x`;
+        // Controles de ajuste fino
+        document.getElementById('btnMoverCima').addEventListener('click', () => {
+            ajusteY -= PASSO_AJUSTE;
+            atualizarAjusteInfo();
+        });
+        document.getElementById('btnMoverBaixo').addEventListener('click', () => {
+            ajusteY += PASSO_AJUSTE;
+            atualizarAjusteInfo();
+        });
+        document.getElementById('btnMoverEsquerda').addEventListener('click', () => {
+            ajusteX -= PASSO_AJUSTE;
+            atualizarAjusteInfo();
+        });
+        document.getElementById('btnMoverDireita').addEventListener('click', () => {
+            ajusteX += PASSO_AJUSTE;
+            atualizarAjusteInfo();
+        });
+        document.getElementById('btnResetAjuste').addEventListener('click', () => {
+            ajusteX = 0;
+            ajusteY = 0;
+            atualizarAjusteInfo();
         });
         
-        document.getElementById('btnZoomOut').addEventListener('click', () => {
-            zoomLevel = Math.max(zoomLevel - 0.05, ZOOM_MIN);
-            document.getElementById('zoomInfo').textContent = `Zoom: ${zoomLevel.toFixed(2)}x`;
-        });
-        
-        document.getElementById('btnResetZoom').addEventListener('click', () => {
-            zoomLevel = 1.0;
-            document.getElementById('zoomInfo').textContent = `Zoom: 1.00x`;
-        });
+        function atualizarAjusteInfo() {
+            document.getElementById('ajusteInfo').textContent = 
+                `Ajuste fino: X: ${(ajusteX * 100).toFixed(1)}% | Y: ${(ajusteY * 100).toFixed(1)}%`;
+        }
         
         // ========== FUNÇÕES SUPABASE ==========
         async function garantirUsuarioExistente() {
@@ -502,8 +512,6 @@
                 
                 provaAtual = data;
                 NUM_QUESTOES = data.num_questoes;
-                NUM_OPCOES = data.opcoes_por_questao;
-                OPCOES = Array(NUM_OPCOES).fill().map((_, i) => String.fromCharCode(65 + i));
                 gabarito = [...data.gabarito];
                 
                 document.getElementById('infoProva').innerHTML = `📋 ${provaAtual.nome_prova} (${NUM_QUESTOES}q)`;
@@ -586,7 +594,7 @@
                     if (prova) {
                         document.getElementById('provaNome').value = prova.nome_prova;
                         document.getElementById('provaNumQuestoes').value = prova.num_questoes;
-                        document.getElementById('provaNumOpcoes').value = prova.opcoes_por_questao;
+                        document.getElementById('provaNumOpcoes').value = prova.opcoes_por_questao || 4;
                         document.getElementById('modalEditarTitulo').innerHTML = '✏️ Editar Prova';
                         document.getElementById('modalEditarProva').dataset.editId = prova.id;
                         document.getElementById('modalEditarProva').style.display = 'block';
@@ -633,14 +641,14 @@
                 });
                 video.srcObject = stream;
                 await new Promise(resolve => { video.onloadedmetadata = () => { video.play(); resolve(); }; });
-                statusAlinhamento.innerHTML = '🟡 Posicione a folha e ajuste o zoom';
+                statusAlinhamento.innerHTML = '🟡 Alinhe a grade com os círculos da folha';
                 document.getElementById('btnCorrigirAuto').disabled = false;
             } catch (err) {
                 try {
                     stream = await navigator.mediaDevices.getUserMedia({ video: true });
                     video.srcObject = stream;
                     await video.play();
-                    statusAlinhamento.innerHTML = '🟡 Posicione a folha';
+                    statusAlinhamento.innerHTML = '🟡 Alinhe a grade com os círculos';
                 } catch (e) {
                     statusAlinhamento.innerHTML = '❌ Erro na câmera';
                 }
@@ -675,8 +683,8 @@
             const tempCtx = tempCanvas.getContext('2d');
             tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
             
-            // Aplica zoom
-            const targetWidth = Math.floor(900 * zoomLevel);
+            // Processamento
+            const targetWidth = 1000;
             const scale = targetWidth / tempCanvas.width;
             const targetHeight = Math.floor(tempCanvas.height * scale);
             
@@ -694,23 +702,21 @@
             const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
             const dados = new Uint8ClampedArray(imageData.data);
             
-            // ===== COORDENADAS AJUSTADAS PARA O LAYER REAL =====
-            // Baseado no modelo: cabeçalho no topo, circulos organizados em 3 colunas
-            // Margens ajustáveis
+            // ===== LAYOUT: 2 COLUNAS × 20 LINHAS =====
+            // Ajuste fino aplicado
+            const ajusteXPx = ajusteX * targetWidth;
+            const ajusteYPx = ajusteY * targetHeight;
             
-            // ÁREA DE DETECÇÃO - ajustada para o layout da folha
-            const areaTopo = targetHeight * 0.22;      // Início após cabeçalho
-            const areaBaixo = targetHeight * 0.90;     // Antes do rodapé
-            const areaEsquerda = targetWidth * 0.08;   // Margem esquerda
-            const areaDireita = targetWidth * 0.92;    // Margem direita
+            const areaTopo = targetHeight * 0.20 + ajusteYPx;
+            const areaBaixo = targetHeight * 0.88 + ajusteYPx;
+            const areaEsquerda = targetWidth * 0.10 + ajusteXPx;
+            const areaDireita = targetWidth * 0.90 + ajusteXPx;
             
-            // Layout: 20 linhas × 3 colunas
             const cellWidth = (areaDireita - areaEsquerda) / COLUNAS_QUESTOES;
             const cellHeight = (areaBaixo - areaTopo) / LINHAS_QUESTOES;
             
-            // Posição horizontal das opções dentro de cada célula
-            const opcaoWidth = cellWidth / (NUM_OPCOES + 0.5);
-            const circleRadius = Math.min(cellWidth, cellHeight) * 0.11;
+            const opcaoWidth = cellWidth / (NUM_OPCOES + 0.7);
+            const circleRadius = Math.min(cellWidth, cellHeight) * 0.12;
             
             overlayCtx.clearRect(0, 0, targetWidth, targetHeight);
             overlayCtx.globalAlpha = 0.85;
@@ -723,13 +729,14 @@
             // Desenha a grade
             overlayCtx.strokeStyle = '#ff6666';
             overlayCtx.lineWidth = 1;
-            for (let i = 1; i < COLUNAS_QUESTOES; i++) {
-                const x = areaEsquerda + i * cellWidth;
-                overlayCtx.beginPath();
-                overlayCtx.moveTo(x, areaTopo);
-                overlayCtx.lineTo(x, areaBaixo);
-                overlayCtx.stroke();
-            }
+            // Linha vertical separando as colunas
+            const xMeio = areaEsquerda + cellWidth;
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(xMeio, areaTopo);
+            overlayCtx.lineTo(xMeio, areaBaixo);
+            overlayCtx.stroke();
+            
+            // Linhas horizontais
             for (let i = 1; i < LINHAS_QUESTOES; i++) {
                 const y = areaTopo + i * cellHeight;
                 overlayCtx.beginPath();
@@ -741,7 +748,6 @@
             function isPixelDark(x, y) {
                 if (x < 0 || x >= targetWidth || y < 0 || y >= targetHeight) return false;
                 const idx = (Math.floor(y) * targetWidth + Math.floor(x)) * 4;
-                // Usa média ponderada (mais sensível ao preto)
                 const brilho = (dados[idx] * 0.299 + dados[idx+1] * 0.587 + dados[idx+2] * 0.114);
                 return brilho < limiarDetecao;
             }
@@ -749,7 +755,6 @@
             function calcularPreenchimento(cx, cy, raio) {
                 let escuros = 0, total = 0;
                 const raioInt = Math.floor(raio);
-                // Verifica mais pontos dentro do círculo
                 for (let dy = -raioInt; dy <= raioInt; dy++) {
                     for (let dx = -raioInt; dx <= raioInt; dx++) {
                         if (dx*dx + dy*dy <= raio * raio) {
@@ -761,19 +766,17 @@
                 return total > 0 ? escuros / total : 0;
             }
             
-            // Função para verificar se uma opção está realmente preenchida
             function verificarPreenchimentoRobusto(cx, cy, raio) {
-                // Verifica 3 áreas: centro, borda superior e borda inferior
                 const raioTest = raio * 0.7;
                 let pontuacao = 0;
                 const pontos = [
                     [0, 0, 1.0],
-                    [-raioTest * 0.5, -raioTest * 0.5, 0.7],
-                    [raioTest * 0.5, -raioTest * 0.5, 0.7],
-                    [-raioTest * 0.5, raioTest * 0.5, 0.7],
-                    [raioTest * 0.5, raioTest * 0.5, 0.7],
-                    [0, -raioTest * 0.8, 0.5],
-                    [0, raioTest * 0.8, 0.5]
+                    [-raioTest * 0.6, -raioTest * 0.6, 0.6],
+                    [raioTest * 0.6, -raioTest * 0.6, 0.6],
+                    [-raioTest * 0.6, raioTest * 0.6, 0.6],
+                    [raioTest * 0.6, raioTest * 0.6, 0.6],
+                    [0, -raioTest * 0.9, 0.4],
+                    [0, raioTest * 0.9, 0.4]
                 ];
                 
                 for (const [dx, dy, peso] of pontos) {
@@ -787,7 +790,7 @@
                         }
                     }
                 }
-                return pontuacao / 4.1; // Normalizado
+                return pontuacao / 4.2;
             }
             
             const respostas = [];
@@ -808,16 +811,14 @@
                     let totalPreenchidas = 0;
                     
                     for (let opt = 0; opt < NUM_OPCOES; opt++) {
-                        const opcaoX = cellX + (opt + 0.7) * opcaoWidth;
+                        const opcaoX = cellX + (opt + 0.6) * opcaoWidth;
                         const opcaoY = cellCenterY;
                         
-                        // Usa a função robusta
                         const preenchimento = verificarPreenchimentoRobusto(opcaoX, opcaoY, circleRadius);
                         
                         overlayCtx.beginPath();
                         overlayCtx.arc(opcaoX, opcaoY, circleRadius, 0, 2 * Math.PI);
                         
-                        // Debug: mostra o nível de preenchimento
                         if (preenchimento > sensibilidadeCirculo) {
                             const intensidade = Math.min(preenchimento * 2, 0.9);
                             overlayCtx.fillStyle = `rgba(0, 255, 0, ${intensidade})`;
@@ -830,15 +831,13 @@
                             }
                         } else {
                             overlayCtx.strokeStyle = '#ff8888';
-                            // Mostra o preenchimento com transparência
                             if (preenchimento > 0.05) {
-                                overlayCtx.fillStyle = `rgba(255, 255, 0, ${preenchimento * 0.5})`;
+                                overlayCtx.fillStyle = `rgba(255, 255, 0, ${preenchimento * 0.4})`;
                                 overlayCtx.fill();
                             }
                         }
                         overlayCtx.stroke();
                         
-                        // Número da opção
                         overlayCtx.font = `${Math.max(8, circleRadius)}px Arial`;
                         overlayCtx.fillStyle = 'white';
                         overlayCtx.textAlign = 'center';
@@ -846,33 +845,26 @@
                         overlayCtx.fillText(OPCOES[opt], opcaoX, opcaoY);
                     }
                     
-                    // Número da questão (no canto superior esquerdo)
-                    overlayCtx.font = `bold ${Math.max(9, circleRadius + 2)}px Arial`;
+                    // Número da questão
+                    const numQuestao = questaoIndex + 1;
+                    overlayCtx.font = `bold ${Math.max(8, circleRadius + 1)}px Arial`;
                     overlayCtx.fillStyle = '#ffff00';
                     overlayCtx.textAlign = 'left';
                     overlayCtx.textBaseline = 'top';
-                    overlayCtx.fillText(`${questaoIndex+1}`, cellX + 3, cellY + 3);
+                    overlayCtx.fillText(`${numQuestao}`, cellX + 3, cellY + 3);
                     
-                    // Decisão: se apenas uma opção foi preenchida claramente
                     if (totalPreenchidas === 1 && melhorOpcao >= 0) {
                         respostas.push(OPCOES[melhorOpcao]);
                         questoesDetectadas++;
-                        overlayCtx.fillStyle = 'rgba(0,255,0,0.15)';
+                        overlayCtx.fillStyle = 'rgba(0,255,0,0.12)';
                         overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
                     } else if (totalPreenchidas > 1) {
-                        // Múltiplas opções - ambíguo
                         respostas.push(null);
                         overlayCtx.fillStyle = 'rgba(255,255,0,0.15)';
                         overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
-                        overlayCtx.font = '10px Arial';
-                        overlayCtx.fillStyle = '#ffaa00';
-                        overlayCtx.textAlign = 'center';
-                        overlayCtx.textBaseline = 'bottom';
-                        overlayCtx.fillText('❓', cellX + cellWidth/2, cellY + cellHeight - 2);
                     } else {
-                        // Não detectado
                         respostas.push(null);
-                        overlayCtx.fillStyle = 'rgba(255,0,0,0.08)';
+                        overlayCtx.fillStyle = 'rgba(255,0,0,0.05)';
                         overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
                     }
                     
@@ -881,7 +873,7 @@
                 if (questaoIndex >= NUM_QUESTOES) break;
             }
             
-            // Atualiza interface com resultados
+            // Atualiza interface
             let acertos = 0;
             const detalhes = [];
             for (let i = 0; i < NUM_QUESTOES; i++) {
@@ -908,16 +900,15 @@
                 </div>
             `).join('');
             
-            // Feedback
             const pctDetectado = (questoesDetectadas / NUM_QUESTOES) * 100;
             if (pctDetectado > 85) {
                 statusAlinhamento.innerHTML = `✅ Excelente! ${questoesDetectadas}/${NUM_QUESTOES} detectadas`;
                 statusAlinhamento.className = 'status-alinhamento good';
             } else if (pctDetectado > 50) {
-                statusAlinhamento.innerHTML = `🟡 ${questoesDetectadas}/${NUM_QUESTOES} - Ajuste o enquadramento ou zoom`;
+                statusAlinhamento.innerHTML = `🟡 ${questoesDetectadas}/${NUM_QUESTOES} - Ajuste o enquadramento`;
                 statusAlinhamento.className = 'status-alinhamento warning';
             } else {
-                statusAlinhamento.innerHTML = `🔴 ${questoesDetectadas}/${NUM_QUESTOES} - Ajuste a posição da câmera e o zoom`;
+                statusAlinhamento.innerHTML = `🔴 ${questoesDetectadas}/${NUM_QUESTOES} - Use os botões de ajuste fino`;
                 statusAlinhamento.className = '';
             }
         }
@@ -935,8 +926,8 @@
         
         document.getElementById('btnNovaProva').addEventListener('click', () => {
             document.getElementById('provaNome').value = '';
-            document.getElementById('provaNumQuestoes').value = 60;
-            document.getElementById('provaNumOpcoes').value = 5;
+            document.getElementById('provaNumQuestoes').value = 40;
+            document.getElementById('provaNumOpcoes').value = 4;
             document.getElementById('modalEditarTitulo').innerHTML = '📝 Criar Prova';
             delete document.getElementById('modalEditarProva').dataset.editId;
             document.getElementById('modalEditarProva').style.display = 'block';
@@ -978,7 +969,7 @@
         
         document.getElementById('btnResetGabarito').addEventListener('click', () => {
             if (confirm('Resetar gabarito?')) {
-                gabarito = new Array(NUM_QUESTOES).fill(OPCOES[0]);
+                gabarito = new Array(NUM_QUESTOES).fill('A');
                 renderizarModalGabarito();
             }
         });
