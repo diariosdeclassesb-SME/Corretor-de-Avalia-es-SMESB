@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Leitor de Gabarito - Alinhamento Automático</title>
+    <title>Leitor de Gabarito - Detecção Aprimorada</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -58,6 +58,7 @@
         .status-alinhamento.good { background: rgba(0, 100, 0, 0.9); color: #00ff00; }
         .status-alinhamento.warning { background: rgba(100, 60, 0, 0.9); color: #ffaa00; }
         .status-alinhamento.detected { background: rgba(0, 60, 100, 0.9); color: #00ccff; }
+        .status-alinhamento.error { background: rgba(100, 0, 0, 0.9); color: #ff4444; }
         button {
             width: 100%;
             padding: 12px;
@@ -254,13 +255,44 @@
             background: rgba(0,40,60,0.7);
             border-radius: 8px;
             margin-top: 4px;
+            min-height: 24px;
         }
+        .ajuste-container {
+            display: flex;
+            gap: 8px;
+            margin: 5px 0;
+            flex-wrap: wrap;
+        }
+        .ajuste-container button {
+            flex: 1;
+            min-width: 60px;
+            padding: 8px;
+            font-size: 0.7rem;
+            margin: 2px;
+            border-radius: 12px;
+        }
+        .btn-ajuste { background: #2196f3; color: white; }
+        .btn-ajuste-reset { background: #666; color: white; }
+        #ajusteInfo {
+            color: #aaa;
+            text-align: center;
+            font-size: 0.65rem;
+            padding: 4px;
+        }
+        .ajuste-manual {
+            background: rgba(255, 100, 0, 0.2);
+            border: 1px solid #ff8800;
+            border-radius: 12px;
+            padding: 8px;
+            margin-top: 8px;
+        }
+        .ajuste-manual label { color: #ffaa00; font-size: 0.7rem; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📸 Leitor de Gabarito - Auto Alinhamento</h1>
+            <h1>📸 Leitor de Gabarito - Detecção Aprimorada</h1>
         </div>
         
         <div class="info-usuario" id="infoUsuario">Carregando...</div>
@@ -272,7 +304,7 @@
         </div>
         
         <div class="instrucao" id="instrucao">
-            💡 Posicione a folha. Os 4 quadrados pretos serão detectados automaticamente!
+            💡 Posicione a folha. Os quadrados pretos serão destacados em AZUL quando detectados.
         </div>
         
         <div class="camera-container">
@@ -280,7 +312,16 @@
             <canvas id="overlayCanvas"></canvas>
         </div>
         
-        <div id="deteccaoInfo">🔍 Detectando quadrados de referência...</div>
+        <div id="deteccaoInfo">🔍 Aguardando detecção dos quadrados...</div>
+        
+        <div class="ajuste-container">
+            <button class="btn-ajuste" id="btnMoverCima">⬆</button>
+            <button class="btn-ajuste" id="btnMoverBaixo">⬇</button>
+            <button class="btn-ajuste" id="btnMoverEsquerda">⬅</button>
+            <button class="btn-ajuste" id="btnMoverDireita">➡</button>
+            <button class="btn-ajuste-reset" id="btnResetAjuste">⟲ Reset</button>
+        </div>
+        <div id="ajusteInfo">Ajuste manual: X: 0 | Y: 0 | Zoom: 1.0</div>
         
         <div class="row-buttons">
             <button class="btn-provas" id="btnGerenciarProvas">📚 Provas</button>
@@ -291,12 +332,15 @@
         <button class="btn-sair" id="btnSair">🚪 Sair</button>
         
         <div class="slider-container">
-            <label>🔧 Limiar de detecção dos quadrados:</label>
-            <input type="range" id="limiarSlider" min="20" max="120" value="50">
-            <span id="limiarValue" style="color:white;">50</span>
-            <label style="display:block; margin-top:5px;">📊 Sensibilidade (preenchimento mínimo):</label>
+            <label>🔧 Limiar de detecção (para quadrados pretos):</label>
+            <input type="range" id="limiarSlider" min="20" max="150" value="60">
+            <span id="limiarValue" style="color:white;">60</span>
+            <label style="display:block; margin-top:5px;">📊 Sensibilidade das respostas:</label>
             <input type="range" id="sensibilidadeSlider" min="0.08" max="0.40" step="0.01" value="0.15">
             <span id="sensibilidadeValue" style="color:white;">0.15</span>
+            <label style="display:block; margin-top:5px;">🔍 Zoom da grade:</label>
+            <input type="range" id="zoomSlider" min="0.7" max="1.3" step="0.01" value="1.0">
+            <span id="zoomValue" style="color:white;">1.00</span>
         </div>
         
         <div class="resultado-preview" id="resultadoPreview" style="display: none;">
@@ -372,6 +416,12 @@
         let NUM_QUESTOES = 40;
         let gabarito = [];
         
+        // Ajustes manuais
+        let ajusteX = 0;
+        let ajusteY = 0;
+        let zoomGrade = 1.0;
+        const PASSO_AJUSTE = 0.005;
+        
         const usuarioId = localStorage.getItem('usuario_id');
         const usuarioNome = localStorage.getItem('usuario_nome');
         
@@ -390,17 +440,18 @@
         const limiarValue = document.getElementById('limiarValue');
         const sensibilidadeSlider = document.getElementById('sensibilidadeSlider');
         const sensibilidadeValue = document.getElementById('sensibilidadeValue');
+        const zoomSlider = document.getElementById('zoomSlider');
+        const zoomValue = document.getElementById('zoomValue');
         const deteccaoInfo = document.getElementById('deteccaoInfo');
         
         let stream = null;
-        let limiarDetecao = 50;
+        let limiarDetecao = 60;
         let sensibilidadeCirculo = 0.15;
         let leituraAtiva = false;
         let frameInterval = null;
         
-        // Pontos de referência dos quadrados (em coordenadas normalizadas)
-        let pontosReferencia = null;
-        let ultimaDeteccao = null;
+        // Últimos pontos detectados para debug
+        let ultimosQuadrados = null;
         
         limiarSlider.addEventListener('input', (e) => {
             limiarDetecao = parseInt(e.target.value);
@@ -411,6 +462,42 @@
             sensibilidadeCirculo = parseFloat(e.target.value);
             sensibilidadeValue.textContent = sensibilidadeCirculo;
         });
+        
+        zoomSlider.addEventListener('input', (e) => {
+            zoomGrade = parseFloat(e.target.value);
+            zoomValue.textContent = zoomGrade.toFixed(2);
+        });
+        
+        // Controles de ajuste fino
+        document.getElementById('btnMoverCima').addEventListener('click', () => {
+            ajusteY -= PASSO_AJUSTE;
+            atualizarAjusteInfo();
+        });
+        document.getElementById('btnMoverBaixo').addEventListener('click', () => {
+            ajusteY += PASSO_AJUSTE;
+            atualizarAjusteInfo();
+        });
+        document.getElementById('btnMoverEsquerda').addEventListener('click', () => {
+            ajusteX -= PASSO_AJUSTE;
+            atualizarAjusteInfo();
+        });
+        document.getElementById('btnMoverDireita').addEventListener('click', () => {
+            ajusteX += PASSO_AJUSTE;
+            atualizarAjusteInfo();
+        });
+        document.getElementById('btnResetAjuste').addEventListener('click', () => {
+            ajusteX = 0;
+            ajusteY = 0;
+            zoomGrade = 1.0;
+            zoomSlider.value = 1.0;
+            zoomValue.textContent = '1.00';
+            atualizarAjusteInfo();
+        });
+        
+        function atualizarAjusteInfo() {
+            document.getElementById('ajusteInfo').textContent = 
+                `Ajuste manual: X: ${(ajusteX * 100).toFixed(1)}% | Y: ${(ajusteY * 100).toFixed(1)}% | Zoom: ${zoomGrade.toFixed(2)}`;
+        }
         
         // ========== FUNÇÕES SUPABASE ==========
         async function garantirUsuarioExistente() {
@@ -583,141 +670,150 @@
             }
         }
         
-        // ========== DETECÇÃO DOS QUADRADOS PRETOS ==========
-        function detectarQuadrados(imageData, width, height) {
+        // ========== DETECÇÃO DE QUADRADOS MELHORADA ==========
+        function detectarQuadradosMelhorado(imageData, width, height) {
             const dados = new Uint8ClampedArray(imageData.data);
-            const quadrados = [];
             const limiar = limiarDetecao;
             
-            // Busca por regiões escuras (quadrados pretos)
-            // Usa uma abordagem de varredura por blocos
-            const step = 5; // Passo de busca
-            const minSize = Math.min(width, height) * 0.02;
-            const maxSize = Math.min(width, height) * 0.08;
-            
-            // Pontos candidatos
-            const candidatos = [];
+            // Encontra todos os pixels escuros
+            const pontosEscuros = [];
+            const step = 3;
             
             for (let y = 0; y < height - step; y += step) {
                 for (let x = 0; x < width - step; x += step) {
-                    // Verifica se é uma região escura
                     const idx = (y * width + x) * 4;
                     const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
-                    
                     if (brilho < limiar) {
-                        candidatos.push({ x, y, brilho });
+                        pontosEscuros.push({ x, y });
                     }
                 }
             }
             
-            // Agrupa candidatos próximos para encontrar centros dos quadrados
-            const agrupados = [];
-            const raioAgrupamento = Math.min(width, height) * 0.015;
+            if (pontosEscuros.length < 10) return null;
             
-            for (const c of candidatos) {
+            // Agrupa por proximidade para encontrar centros
+            const raioAgrupamento = Math.min(width, height) * 0.02;
+            const grupos = [];
+            
+            for (const p of pontosEscuros) {
                 let encontrado = false;
-                for (const grupo of agrupados) {
-                    const dx = c.x - grupo.cx;
-                    const dy = c.y - grupo.cy;
+                for (const g of grupos) {
+                    const dx = p.x - g.cx;
+                    const dy = p.y - g.cy;
                     if (dx*dx + dy*dy < raioAgrupamento * raioAgrupamento) {
-                        grupo.cx = (grupo.cx * grupo.count + c.x) / (grupo.count + 1);
-                        grupo.cy = (grupo.cy * grupo.count + c.y) / (grupo.count + 1);
-                        grupo.count++;
+                        g.cx = (g.cx * g.count + p.x) / (g.count + 1);
+                        g.cy = (g.cy * g.count + p.y) / (g.count + 1);
+                        g.count++;
                         encontrado = true;
                         break;
                     }
                 }
                 if (!encontrado) {
-                    agrupados.push({ cx: c.x, cy: c.y, count: 1 });
+                    grupos.push({ cx: p.x, cy: p.y, count: 1 });
                 }
             }
             
             // Filtra grupos com tamanho mínimo
-            const gruposFiltrados = agrupados.filter(g => g.count > 5);
+            const gruposFiltrados = grupos.filter(g => g.count > 8);
             
-            // Para cada grupo, verifica se é realmente um quadrado
+            // Para cada grupo, verifica se é um quadrado
+            const quadrados = [];
+            const tamanhoMin = Math.min(width, height) * 0.015;
+            const tamanhoMax = Math.min(width, height) * 0.07;
+            
             for (const g of gruposFiltrados) {
                 const cx = Math.round(g.cx);
                 const cy = Math.round(g.cy);
-                const raio = Math.min(width, height) * 0.015;
                 
-                // Verifica se tem formato de quadrado (proporção)
-                let largura = 0, altura = 0;
-                let encontrouBorda = false;
+                // Mede a largura do objeto escuro
+                let esquerda = cx, direita = cx;
+                let topo = cy, baixo = cy;
                 
-                // Mede largura
-                for (let dx = 0; dx < maxSize; dx++) {
-                    const px = cx + dx;
-                    if (px >= width) break;
-                    const idx = (cy * width + px) * 4;
+                // Expandir para esquerda
+                for (let x = cx - 1; x >= 0; x--) {
+                    const idx = (cy * width + x) * 4;
                     const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
-                    if (brilho < limiar) largura = dx;
-                    else break;
-                }
-                for (let dx = 1; dx < maxSize; dx++) {
-                    const px = cx - dx;
-                    if (px < 0) break;
-                    const idx = (cy * width + px) * 4;
-                    const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
-                    if (brilho < limiar) largura = Math.max(largura, dx);
+                    if (brilho < limiar) esquerda = x;
                     else break;
                 }
                 
-                // Mede altura
-                for (let dy = 0; dy < maxSize; dy++) {
-                    const py = cy + dy;
-                    if (py >= height) break;
-                    const idx = (py * width + cx) * 4;
+                // Expandir para direita
+                for (let x = cx + 1; x < width; x++) {
+                    const idx = (cy * width + x) * 4;
                     const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
-                    if (brilho < limiar) altura = dy;
-                    else break;
-                }
-                for (let dy = 1; dy < maxSize; dy++) {
-                    const py = cy - dy;
-                    if (py < 0) break;
-                    const idx = (py * width + cx) * 4;
-                    const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
-                    if (brilho < limiar) altura = Math.max(altura, dy);
+                    if (brilho < limiar) direita = x;
                     else break;
                 }
                 
-                // Verifica se é um quadrado (proporção próxima de 1)
-                const tamanho = Math.max(largura, altura);
-                if (tamanho > minSize && tamanho < maxSize) {
+                // Expandir para cima
+                for (let y = cy - 1; y >= 0; y--) {
+                    const idx = (y * width + cx) * 4;
+                    const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
+                    if (brilho < limiar) topo = y;
+                    else break;
+                }
+                
+                // Expandir para baixo
+                for (let y = cy + 1; y < height; y++) {
+                    const idx = (y * width + cx) * 4;
+                    const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
+                    if (brilho < limiar) baixo = y;
+                    else break;
+                }
+                
+                const largura = direita - esquerda + 1;
+                const altura = baixo - topo + 1;
+                
+                // Verifica se é um quadrado
+                if (largura > tamanhoMin && largura < tamanhoMax &&
+                    altura > tamanhoMin && altura < tamanhoMax) {
                     const proporcao = Math.min(largura, altura) / Math.max(largura, altura);
                     if (proporcao > 0.6) {
-                        quadrados.push({ 
-                            x: cx, 
-                            y: cy, 
-                            largura: tamanho * 2,
-                            altura: tamanho * 2
+                        quadrados.push({
+                            x: (esquerda + direita) / 2,
+                            y: (topo + baixo) / 2,
+                            largura: largura,
+                            altura: altura,
+                            esquerda: esquerda,
+                            direita: direita,
+                            topo: topo,
+                            baixo: baixo
                         });
                     }
                 }
             }
             
-            // Organiza os quadrados: superior esquerdo, superior direito, inferior esquerdo, inferior direito
-            if (quadrados.length >= 4) {
-                // Ordena por Y (topo vs baixo)
-                quadrados.sort((a, b) => a.y - b.y);
-                const topo = quadrados.slice(0, 2);
-                const baixo = quadrados.slice(-2);
-                
-                // Ordena os de cima por X
-                topo.sort((a, b) => a.x - b.x);
-                baixo.sort((a, b) => a.x - b.x);
-                
-                if (topo.length >= 2 && baixo.length >= 2) {
-                    return {
-                        superiorEsquerdo: topo[0],
-                        superiorDireito: topo[1],
-                        inferiorEsquerdo: baixo[0],
-                        inferiorDireito: baixo[1]
-                    };
-                }
-            }
+            if (quadrados.length < 4) return null;
             
-            return null;
+            // Organiza em 4 cantos
+            // Ordena por Y para separar superior/inferior
+            quadrados.sort((a, b) => a.y - b.y);
+            
+            const metade = Math.floor(quadrados.length / 2);
+            const superiores = quadrados.slice(0, metade);
+            const inferiores = quadrados.slice(metade);
+            
+            // Ordena cada grupo por X
+            superiores.sort((a, b) => a.x - b.x);
+            inferiores.sort((a, b) => a.x - b.x);
+            
+            if (superiores.length < 2 || inferiores.length < 2) return null;
+            
+            // Pega os dois mais extremos de cada grupo
+            const resultado = {
+                superiorEsquerdo: superiores[0],
+                superiorDireito: superiores[superiores.length - 1],
+                inferiorEsquerdo: inferiores[0],
+                inferiorDireito: inferiores[inferiores.length - 1]
+            };
+            
+            // Verifica se os quadrados estão nos cantos
+            const larguraTotal = resultado.superiorDireito.x - resultado.superiorEsquerdo.x;
+            const alturaTotal = resultado.inferiorEsquerdo.y - resultado.superiorEsquerdo.y;
+            
+            if (larguraTotal < width * 0.3 || alturaTotal < height * 0.3) return null;
+            
+            return resultado;
         }
         
         // ========== CÂMERA E DETECÇÃO ==========
@@ -773,8 +869,7 @@
             const tempCtx = tempCanvas.getContext('2d');
             tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
             
-            // Processamento
-            const targetWidth = 1000;
+            const targetWidth = 1200;
             const scale = targetWidth / tempCanvas.width;
             const targetHeight = Math.floor(tempCanvas.height * scale);
             
@@ -784,67 +879,77 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(tempCanvas, 0, 0, targetWidth, targetHeight);
             
-            // Configura overlay
             overlayCanvas.width = targetWidth;
             overlayCanvas.height = targetHeight;
             const overlayCtx = overlayCanvas.getContext('2d');
             
             const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
-            const dados = new Uint8ClampedArray(imageData.data);
-            
-            // DETECTA OS QUADRADOS PRETOS
-            const quadrados = detectarQuadrados(imageData, targetWidth, targetHeight);
             
             overlayCtx.clearRect(0, 0, targetWidth, targetHeight);
             overlayCtx.globalAlpha = 0.85;
             
+            // Tenta detectar os quadrados
+            const quadrados = detectarQuadradosMelhorado(imageData, targetWidth, targetHeight);
+            
             if (quadrados) {
+                ultimosQuadrados = quadrados;
                 const { superiorEsquerdo, superiorDireito, inferiorEsquerdo, inferiorDireito } = quadrados;
                 
                 // Desenha os quadrados detectados em AZUL
                 const quadradosArray = [superiorEsquerdo, superiorDireito, inferiorEsquerdo, inferiorDireito];
                 for (const q of quadradosArray) {
+                    // Retângulo
                     overlayCtx.strokeStyle = '#00ccff';
                     overlayCtx.lineWidth = 3;
                     overlayCtx.strokeRect(
-                        q.x - q.largura/2, 
-                        q.y - q.altura/2, 
-                        q.largura, 
-                        q.altura
+                        q.esquerda, 
+                        q.topo, 
+                        q.direita - q.esquerda, 
+                        q.baixo - q.topo
                     );
                     // Centro
                     overlayCtx.fillStyle = '#00ccff';
                     overlayCtx.beginPath();
-                    overlayCtx.arc(q.x, q.y, 4, 0, 2 * Math.PI);
+                    overlayCtx.arc(q.x, q.y, 5, 0, 2 * Math.PI);
                     overlayCtx.fill();
+                    // Label
+                    overlayCtx.fillStyle = '#00ccff';
+                    overlayCtx.font = '12px Arial';
+                    overlayCtx.textAlign = 'left';
+                    overlayCtx.textBaseline = 'bottom';
+                    const labels = ['SE', 'SD', 'IE', 'ID'];
+                    overlayCtx.fillText(labels[quadradosArray.indexOf(q)], q.esquerda, q.topo - 2);
                 }
                 
-                // Calcula a área de grade baseada nos quadrados
-                // A folha tem 14.5cm de largura e 20cm de altura
-                // Os quadrados estão nos cantos da área útil
-                const margemLateral = 0.05; // 5% de margem
-                const margemSuperior = 0.12; // 12% de margem (para cabeçalho)
-                const margemInferior = 0.05; // 5% de margem
+                // Calcula a área da grade baseada nos quadrados
+                const margemEsquerda = 0.06;
+                const margemDireita = 0.06;
+                const margemSuperior = 0.10;
+                const margemInferior = 0.06;
                 
-                // Calcula a área de grade baseada nos quadrados
-                const topY = superiorEsquerdo.y + (superiorEsquerdo.altura * 0.5);
-                const bottomY = inferiorEsquerdo.y - (inferiorEsquerdo.altura * 0.5);
-                const leftX = superiorEsquerdo.x + (superiorEsquerdo.largura * 0.5);
-                const rightX = superiorDireito.x - (superiorDireito.largura * 0.5);
+                const topY = superiorEsquerdo.topo + (superiorEsquerdo.altura * 0.5);
+                const bottomY = inferiorEsquerdo.baixo - (inferiorEsquerdo.altura * 0.5);
+                const leftX = superiorEsquerdo.esquerda + (superiorEsquerdo.largura * 0.5);
+                const rightX = superiorDireito.direita - (superiorDireito.largura * 0.5);
                 
-                // Aplica margens
                 const alturaGrade = bottomY - topY;
                 const larguraGrade = rightX - leftX;
                 
-                const areaTopo = topY + (alturaGrade * margemSuperior);
-                const areaBaixo = bottomY - (alturaGrade * margemInferior);
-                const areaEsquerda = leftX + (larguraGrade * margemLateral);
-                const areaDireita = rightX - (larguraGrade * margemLateral);
+                // Aplica zoom
+                const zoom = zoomGrade;
+                const centroX = (leftX + rightX) / 2;
+                const centroY = (topY + bottomY) / 2;
+                const larguraZoom = larguraGrade * zoom;
+                const alturaZoom = alturaGrade * zoom;
                 
-                // Atualiza info
-                deteccaoInfo.textContent = `✅ Quadrados detectados! Grade ajustada automaticamente`;
+                const areaTopo = centroY - (alturaZoom / 2) + (alturaZoom * margemSuperior) + (ajusteY * targetHeight);
+                const areaBaixo = centroY + (alturaZoom / 2) - (alturaZoom * margemInferior) + (ajusteY * targetHeight);
+                const areaEsquerda = centroX - (larguraZoom / 2) + (larguraZoom * margemEsquerda) + (ajusteX * targetWidth);
+                const areaDireita = centroX + (larguraZoom / 2) - (larguraZoom * margemDireita) + (ajusteX * targetWidth);
+                
+                deteccaoInfo.textContent = `✅ Quadrados detectados! SE(${Math.round(superiorEsquerdo.x)},${Math.round(superiorEsquerdo.y)}) SD(${Math.round(superiorDireito.x)},${Math.round(superiorDireito.y)})`;
                 statusAlinhamento.className = 'status-alinhamento detected';
-                statusAlinhamento.innerHTML = '🔵 Grade alinhada pelos quadrados de referência!';
+                statusAlinhamento.innerHTML = '🔵 Grade alinhada! Use ajuste fino se necessário.';
                 
                 // DESENHA A GRADE
                 const cellWidth = (areaDireita - areaEsquerda) / COLUNAS_QUESTOES;
@@ -875,11 +980,13 @@
                 }
                 
                 // ===== DETECÇÃO DAS RESPOSTAS =====
+                const dados = new Uint8ClampedArray(imageData.data);
+                
                 function isPixelDark(x, y) {
                     if (x < 0 || x >= targetWidth || y < 0 || y >= targetHeight) return false;
                     const idx = (Math.floor(y) * targetWidth + Math.floor(x)) * 4;
                     const brilho = (dados[idx] * 0.299 + dados[idx+1] * 0.587 + dados[idx+2] * 0.114);
-                    return brilho < limiarDetecao;
+                    return brilho < limiarDetecao * 1.2;
                 }
                 
                 function verificarPreenchimentoRobusto(cx, cy, raio) {
@@ -1021,26 +1128,27 @@
                     statusAlinhamento.innerHTML = `🟡 ${questoesDetectadas}/${NUM_QUESTOES} - Verifique o preenchimento`;
                     statusAlinhamento.className = 'status-alinhamento warning';
                 } else {
-                    statusAlinhamento.innerHTML = `🔴 ${questoesDetectadas}/${NUM_QUESTOES} - Ajuste a iluminação ou posição`;
+                    statusAlinhamento.innerHTML = `🔴 ${questoesDetectadas}/${NUM_QUESTOES} - Ajuste a iluminação ou use os controles`;
                     statusAlinhamento.className = '';
                 }
                 
             } else {
                 // Não detectou os quadrados
-                deteccaoInfo.textContent = '🔴 Quadrados não detectados. Verifique se a folha está bem iluminada e os quadrados pretos estão visíveis.';
+                deteccaoInfo.textContent = '🔴 Quadrados não detectados. Verifique: 1) Iluminação 2) Folha bem posicionada 3) Ajuste o limiar';
                 statusAlinhamento.innerHTML = '🔴 Quadrados de referência não encontrados!';
-                statusAlinhamento.className = '';
+                statusAlinhamento.className = 'status-alinhamento error';
                 
-                // Desenha instrução na tela
-                overlayCtx.fillStyle = 'rgba(255,0,0,0.3)';
+                // Desenha instrução
+                overlayCtx.fillStyle = 'rgba(255,0,0,0.2)';
                 overlayCtx.fillRect(0, 0, targetWidth, targetHeight);
-                overlayCtx.fillStyle = '#ff0000';
-                overlayCtx.font = '24px Arial';
+                overlayCtx.fillStyle = '#ff4444';
+                overlayCtx.font = '28px Arial';
                 overlayCtx.textAlign = 'center';
                 overlayCtx.textBaseline = 'middle';
-                overlayCtx.fillText('⚠️ Posicione a folha', targetWidth/2, targetHeight/2 - 20);
-                overlayCtx.font = '18px Arial';
-                overlayCtx.fillText('Os 4 quadrados pretos não foram encontrados', targetWidth/2, targetHeight/2 + 30);
+                overlayCtx.fillText('⚠️ Quadrados não detectados', targetWidth/2, targetHeight/2 - 30);
+                overlayCtx.font = '16px Arial';
+                overlayCtx.fillStyle = '#ff8888';
+                overlayCtx.fillText('Ajuste o LIMIAR ou posicione melhor a folha', targetWidth/2, targetHeight/2 + 30);
             }
         }
         
