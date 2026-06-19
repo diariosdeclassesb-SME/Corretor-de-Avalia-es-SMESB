@@ -1,1536 +1,215 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Leitor de Gabarito - Estabilizado</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leitor Básico</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            min-height: 100vh;
-            background: #000;
-            padding: 8px;
-            overflow-y: auto;
+        body { background: #000; color: #fff; font-family: Arial; padding: 10px; }
+        video { width: 100%; border-radius: 10px; background: #111; }
+        canvas { display: none; }
+        .info { background: #222; padding: 10px; border-radius: 10px; margin: 5px 0; }
+        button { 
+            background: #1a73e8; color: white; border: none; 
+            padding: 15px; border-radius: 10px; font-size: 16px;
+            width: 100%; margin: 5px 0; font-weight: bold;
         }
-        .container { max-width: 500px; margin: auto; position: relative; }
-        .header {
-            background: linear-gradient(135deg, #1a73e8, #0d47a1);
-            padding: 8px 12px;
-            border-radius: 12px;
-            text-align: center;
-            margin-bottom: 6px;
-        }
-        .header h1 { font-size: 0.85rem; color: white; }
-        
-        .info-row {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 6px;
-        }
-        .info-row > div {
-            flex: 1;
-            background: rgba(44, 44, 44, 0.95);
-            padding: 4px 8px;
-            border-radius: 8px;
-            font-size: 0.55rem;
-            text-align: center;
-            color: white;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .info-gabarito {
-            padding: 4px 8px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 0.55rem;
-        }
-        .info-gabarito.carregado { background: rgba(76, 175, 80, 0.9); color: white; }
-        .info-gabarito.nao-carregado { background: rgba(255, 68, 68, 0.9); color: white; }
-        
-        .status-alinhamento {
-            background: rgba(0,0,0,0.8);
-            padding: 6px 10px;
-            border-radius: 10px;
-            text-align: center;
-            font-size: 0.65rem;
-            margin-bottom: 4px;
-            font-weight: bold;
-            color: #ffaa00;
-        }
-        .status-alinhamento.good { background: rgba(0, 100, 0, 0.9); color: #00ff00; }
-        .status-alinhamento.warning { background: rgba(100, 60, 0, 0.9); color: #ffaa00; }
-        .status-alinhamento.detected { background: rgba(0, 60, 100, 0.9); color: #00ccff; }
-        .status-alinhamento.error { background: rgba(100, 0, 0, 0.9); color: #ff4444; }
-        .status-alinhamento.capturado { background: rgba(0, 100, 80, 0.9); color: #00ffaa; }
-        .status-alinhamento.estavel { background: rgba(0, 80, 0, 0.9); color: #00ff00; }
-        
-        .camera-container {
-            position: relative;
-            background: #000;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 6px;
-            aspect-ratio: 3 / 4;
-            border: 2px solid rgba(255,255,255,0.15);
-        }
-        .camera-container.capturado {
-            border-color: #00ffaa;
-            box-shadow: 0 0 20px rgba(0, 255, 170, 0.3);
-        }
-        .camera-container.alinhado {
-            border-color: #00ccff;
-            box-shadow: 0 0 15px rgba(0, 204, 255, 0.2);
-        }
-        .camera-container.estavel {
-            border-color: #00ff00;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
-        }
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            pointer-events: none;
-        }
-        
-        .controles-superiores {
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-            margin-bottom: 4px;
-        }
-        .controles-superiores button {
-            flex: 1;
-            min-width: 36px;
-            padding: 6px 4px;
-            font-size: 0.6rem;
-            font-weight: bold;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: #333;
-            color: white;
-        }
-        .controles-superiores button:active { transform: scale(0.95); }
-        .btn-ajuste { background: #2196f3; color: white; }
-        .btn-ajuste-reset { background: #666; color: white; }
-        .btn-zoom { background: #4caf50; color: white; }
-        .btn-capturar { 
-            background: #ff6f00; 
-            color: white; 
-            font-size: 0.6rem;
-            padding: 6px 8px;
-            min-width: 65px;
-            animation: pulse 1.5s infinite;
-        }
-        .btn-capturar.capturado {
-            background: #00c853;
-            animation: none;
-        }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
-        }
-        
-        #ajusteInfo {
-            color: #aaa;
-            text-align: center;
-            font-size: 0.5rem;
-            padding: 2px;
-            margin-bottom: 4px;
-        }
-        
-        .row-buttons {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 4px;
-        }
-        .row-buttons button {
-            flex: 1;
-            padding: 8px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            border: none;
-            border-radius: 16px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .row-buttons button:active { transform: scale(0.97); }
-        .btn-corrigir-auto { background: #1a73e8; color: white; }
-        .btn-corrigir-auto.ativo { background: #f44336; }
-        .btn-provas { background: #4caf50; color: white; }
-        .btn-gabarito { background: #3c39f5; color: white; }
-        .btn-sair { background: #dc3545; color: white; }
-        
-        .slider-container {
-            background: #333;
-            padding: 6px 10px;
-            border-radius: 10px;
-            margin-top: 4px;
-        }
-        .slider-container label { color: #aaa; font-size: 0.5rem; display: block; }
-        .slider-container input[type="range"] { width: 100%; margin: 2px 0; }
-        .slider-container span { color: white; font-size: 0.5rem; }
-        .slider-row {
-            display: flex;
-            gap: 10px;
-        }
-        .slider-row > div {
-            flex: 1;
-        }
-        
-        .resultado-preview {
-            background: rgba(30, 30, 30, 0.95);
-            border-radius: 12px;
-            padding: 8px 12px;
-            margin-top: 6px;
-        }
-        .resultado-preview.capturado {
-            border: 2px solid #00ffaa;
-        }
-        .acertos-tempo-real {
-            font-size: 1rem;
-            color: #4caf50;
-            text-align: center;
-            font-weight: bold;
-        }
-        .nota-tempo-real {
-            font-size: 0.8rem;
-            text-align: center;
-            color: white;
-        }
-        .respostas-grid {
-            max-height: 120px;
-            overflow-y: auto;
-            display: grid;
-            grid-template-columns: repeat(10, 1fr);
-            gap: 2px;
-            margin-top: 6px;
-        }
-        .resposta-item {
-            padding: 2px;
-            border-radius: 3px;
-            text-align: center;
-            font-size: 0.45rem;
-            color: white;
-        }
-        .resposta-certa { background: #1b5e1b; }
-        .resposta-errada { background: #8b1a1a; }
-        .resposta-nao-detectada { background: #555; }
-        
-        #deteccaoInfo {
-            color: #00ccff;
-            text-align: center;
-            font-size: 0.55rem;
-            padding: 3px;
-            background: rgba(0,40,60,0.7);
-            border-radius: 8px;
-            margin-top: 3px;
-            min-height: 20px;
-        }
-        #deteccaoInfo.capturado {
-            background: rgba(0,80,60,0.7);
-            color: #00ffaa;
-        }
-        #deteccaoInfo.estavel {
-            background: rgba(0,80,0,0.7);
-            color: #00ff00;
-        }
-        
-        .badge-captura {
-            display: none;
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #00c853;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            z-index: 10;
-        }
-        .badge-captura.visible {
-            display: block;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.95);
-            z-index: 1000;
-            overflow-y: auto;
-            padding: 20px;
-        }
-        .modal-content {
-            background: #1e1e1e;
-            border-radius: 20px;
-            padding: 20px;
-            max-width: 500px;
-            margin: 20px auto;
-            color: white;
-        }
-        .modal-content h2 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #1a73e8;
-            font-size: 1.1rem;
-        }
-        .config-item { margin-bottom: 15px; }
-        .config-item label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: bold;
-            font-size: 0.85rem;
-            color: white;
-        }
-        .config-item input, .config-item select {
-            width: 100%;
-            padding: 10px;
-            border-radius: 10px;
-            border: none;
-            background: #333;
-            color: white;
-            font-size: 0.85rem;
-        }
-        .gabarito-grid {
-            display: grid;
-            grid-template-columns: repeat(10, 1fr);
-            gap: 5px;
-            margin-bottom: 20px;
-            max-height: 350px;
-            overflow-y: auto;
-            padding: 10px;
-        }
-        .gab-item {
-            background: #2c2c2c;
-            padding: 5px;
-            border-radius: 6px;
-            text-align: center;
-        }
-        .gab-item label {
-            display: block;
-            font-size: 0.6rem;
-            color: #aaa;
-        }
-        .gab-item select {
-            width: 100%;
-            padding: 4px;
-            border-radius: 4px;
-            background: #444;
-            color: white;
-            border: none;
-            text-align: center;
-            font-size: 0.7rem;
-        }
-        .modal-buttons { display: flex; gap: 10px; margin-top: 10px; }
-        .modal-buttons button { flex: 1; margin: 0; padding: 12px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-salvar-gabarito { background: #4caf50; color: white; }
-        .btn-fechar-modal { background: #666; color: white; }
-        .btn-reset { background: #ff4444; color: white; margin-top: 10px; padding: 12px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; width: 100%; }
-        .btn-nova-prova { background: #4caf50; color: white; padding: 12px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 12px; }
-        .lista-provas { max-height: 300px; overflow-y: auto; }
-        .prova-item {
-            background: #2c2c2c;
-            padding: 10px;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-        }
-        .prova-info { flex: 1; }
-        .prova-nome { font-weight: bold; font-size: 0.85rem; color: white; }
-        .prova-detalhes { font-size: 0.6rem; color: #aaa; }
-        .prova-acoes { display: flex; gap: 8px; }
-        .btn-editar-prova { background: #2196f3; padding: 5px 8px; font-size: 0.65rem; margin: 0; width: auto; border: none; border-radius: 8px; color: white; cursor: pointer; }
-        .btn-excluir-prova { background: #ff4444; padding: 5px 8px; font-size: 0.65rem; margin: 0; width: auto; border: none; border-radius: 8px; color: white; cursor: pointer; }
+        button:active { transform: scale(0.95); }
+        .resultado { background: #1a1a1a; padding: 10px; border-radius: 10px; margin-top: 10px; display: none; }
+        .nota { font-size: 24px; color: #4caf50; text-align: center; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-height: 150px; overflow-y: auto; }
+        .item { padding: 2px; border-radius: 3px; text-align: center; font-size: 10px; }
+        .certa { background: #1b5e1b; }
+        .errada { background: #8b1a1a; }
+        .vazio { background: #444; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📸 Leitor - Estabilizado</h1>
-        </div>
-        
-        <div class="info-row">
-            <div id="infoUsuario">Carregando...</div>
-            <div id="infoProva">📋 Nenhuma</div>
-            <div class="info-gabarito nao-carregado" id="infoGabarito">⚠️</div>
-        </div>
-        
-        <div class="status-alinhamento" id="statusAlinhamento">🟡 Aguardando câmera...</div>
-        
-        <div class="camera-container" id="cameraContainer">
-            <video id="video" autoplay playsinline muted></video>
-            <canvas id="overlayCanvas"></canvas>
-            <div class="badge-captura" id="badgeCaptura">✅ CAPTURADO</div>
-        </div>
-        
-        <div id="deteccaoInfo">🔍 Posicione a folha - aguardando estabilização</div>
-        
-        <div class="controles-superiores">
-            <button class="btn-ajuste" id="btnMoverCima">⬆</button>
-            <button class="btn-ajuste" id="btnMoverBaixo">⬇</button>
-            <button class="btn-ajuste" id="btnMoverEsquerda">⬅</button>
-            <button class="btn-ajuste" id="btnMoverDireita">➡</button>
-            <button class="btn-zoom" id="btnZoomMais">🔍+</button>
-            <button class="btn-zoom" id="btnZoomMenos">🔍-</button>
-            <button class="btn-capturar" id="btnCapturar">📸 CAPTURAR</button>
-            <button class="btn-ajuste-reset" id="btnResetAjuste">⟲</button>
-        </div>
-        <div id="ajusteInfo">Auto alinhamento estabilizado</div>
-        
-        <div class="row-buttons">
-            <button class="btn-corrigir-auto" id="btnCorrigirAuto">🎯 Prévia</button>
-            <button class="btn-provas" id="btnGerenciarProvas">📚</button>
-            <button class="btn-gabarito" id="btnAbrirGabarito" disabled>📝</button>
-            <button class="btn-sair" id="btnSair">🚪</button>
-        </div>
-        
-        <div class="slider-container">
-            <div class="slider-row">
-                <div>
-                    <label>🔧 Limiar: <span id="limiarValue">50</span></label>
-                    <input type="range" id="limiarSlider" min="20" max="150" value="50">
-                </div>
-                <div>
-                    <label>📊 Sensib.: <span id="sensibilidadeValue">0.22</span></label>
-                    <input type="range" id="sensibilidadeSlider" min="0.10" max="0.50" step="0.01" value="0.22">
-                </div>
-                <div>
-                    <label>📐 Estab.: <span id="estabilidadeValue">3</span></label>
-                    <input type="range" id="estabilidadeSlider" min="2" max="10" step="1" value="3">
-                </div>
-            </div>
-        </div>
-        
-        <div class="resultado-preview" id="resultadoPreview" style="display: none;">
-            <div class="acertos-tempo-real" id="acertosTempoReal">- / -</div>
-            <div class="nota-tempo-real" id="notaTempoReal">🎓 NOTA: -</div>
-            <div class="respostas-grid" id="respostasGrid"></div>
-        </div>
-    </div>
+    <h1>📸 Leitor Básico</h1>
+    <div class="info" id="status">🟡 Aguardando...</div>
     
-    <!-- Modais -->
-    <div id="modalProvas" class="modal">
-        <div class="modal-content">
-            <h2>📚 Minhas Provas</h2>
-            <button class="btn-nova-prova" id="btnNovaProva">➕ Criar Nova Prova</button>
-            <div id="listaProvas" class="lista-provas"></div>
-            <button id="btnFecharProvas" class="btn-fechar-modal">Fechar</button>
-        </div>
-    </div>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
     
-    <div id="modalEditarProva" class="modal">
-        <div class="modal-content">
-            <h2 id="modalEditarTitulo">📝 Criar Nova Prova</h2>
-            <div class="config-item">
-                <label>📛 Nome da prova:</label>
-                <input type="text" id="provaNome" placeholder="Ex: Prova 1 - Matemática">
-            </div>
-            <div class="config-item">
-                <label>📊 Quantidade de questões:</label>
-                <input type="number" id="provaNumQuestoes" min="10" max="100" step="5" value="40">
-            </div>
-            <div class="config-item">
-                <label>🔤 Número de alternativas:</label>
-                <select id="provaNumOpcoes">
-                    <option value="4" selected>4 opções (A, B, C, D)</option>
-                    <option value="5">5 opções (A, B, C, D, E)</option>
-                </select>
-            </div>
-            <div class="modal-buttons">
-                <button id="btnCriarProva" class="btn-salvar-gabarito">💾 Criar Prova</button>
-                <button id="btnCancelarEdicao" class="btn-fechar-modal">Cancelar</button>
-            </div>
-        </div>
-    </div>
+    <button id="btnCorrigir">📸 CORRIGIR</button>
     
-    <div id="modalGabarito" class="modal">
-        <div class="modal-content">
-            <h2 id="modalGabaritoTitulo">📝 Editar Gabarito</h2>
-            <div id="gabaritoLista" class="gabarito-grid"></div>
-            <div class="modal-buttons">
-                <button id="btnSalvarGabarito" class="btn-salvar-gabarito">💾 Salvar</button>
-                <button id="btnFecharGabarito" class="btn-fechar-modal">Fechar</button>
-            </div>
-            <button id="btnResetGabarito" class="btn-reset">🔄 Resetar</button>
-        </div>
+    <div class="resultado" id="resultado">
+        <div class="nota" id="nota">NOTA: -</div>
+        <div class="grid" id="grid"></div>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <script>
-        // ========== CONFIGURAÇÕES ==========
-        const SUPABASE_URL = 'https://jmxtiaauezblgkichekx.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpteHRpYWF1ZXpibGdraWNoZWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDIyNjIsImV4cCI6MjA5NDYxODI2Mn0.jD0KRpdl85Cee24qwmV9nDNntR2Wk48DlJLcJnxoTyg';
+        // ========== CONFIGURAÇÃO ==========
+        // Use o Excel para gerar o gabarito
+        // Coloque as respostas corretas aqui (A, B, C, D)
+        const GABARITO = [
+            'A','B','C','D','A','B','C','D','A','B',
+            'C','D','A','B','C','D','A','B','C','D',
+            'A','B','C','D','A','B','C','D','A','B',
+            'C','D','A','B','C','D','A','B','C','D'
+        ];
         
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        const LINHAS_QUESTOES = 20;
-        const COLUNAS_QUESTOES = 2;
-        const NUM_OPCOES = 4;
-        const OPCOES = ['A', 'B', 'C', 'D'];
-        
-        let provas = [];
-        let provaAtual = null;
-        let NUM_QUESTOES = 40;
-        let gabarito = [];
-        
-        let ajusteX = 0;
-        let ajusteY = 0;
-        let zoomGrade = 1.0;
-        let margemInterna = 0.02;
-        let framesEstaveis = 0;
-        let framesParaEstabilizar = 3;
-        let gradeEstavel = false;
-        
-        let capturado = false;
-        let resultadoCapturado = null;
-        let ultimaDeteccao = null;
-        
-        // Média móvel dos quadrados
-        let historicoQuadrados = [];
-        const MAX_HISTORICO = 5;
-        
-        const usuarioId = localStorage.getItem('usuario_id');
-        const usuarioNome = localStorage.getItem('usuario_nome');
-        
-        if (!usuarioId) {
-            alert('⚠️ Faça login primeiro!');
-            window.location.href = 'index.html';
-        }
-        
-        document.getElementById('infoUsuario').innerHTML = `👨‍🏫 ${usuarioNome || 'Professor'}`;
-        
-        // Elementos
         const video = document.getElementById('video');
-        const overlayCanvas = document.getElementById('overlayCanvas');
-        const cameraContainer = document.getElementById('cameraContainer');
-        const badgeCaptura = document.getElementById('badgeCaptura');
-        const statusAlinhamento = document.getElementById('statusAlinhamento');
-        const limiarSlider = document.getElementById('limiarSlider');
-        const limiarValue = document.getElementById('limiarValue');
-        const sensibilidadeSlider = document.getElementById('sensibilidadeSlider');
-        const sensibilidadeValue = document.getElementById('sensibilidadeValue');
-        const estabilidadeSlider = document.getElementById('estabilidadeSlider');
-        const estabilidadeValue = document.getElementById('estabilidadeValue');
-        const deteccaoInfo = document.getElementById('deteccaoInfo');
-        const resultadoPreview = document.getElementById('resultadoPreview');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const status = document.getElementById('status');
+        const resultado = document.getElementById('resultado');
+        const notaDiv = document.getElementById('nota');
+        const gridDiv = document.getElementById('grid');
         
         let stream = null;
-        let limiarDetecao = 50;
-        let sensibilidadeCirculo = 0.22;
-        let leituraAtiva = false;
-        let frameInterval = null;
-        let ultimoQuadrados = null;
-        let quadradosDetectados = false;
+        let corrigindo = false;
         
-        limiarSlider.addEventListener('input', (e) => {
-            limiarDetecao = parseInt(e.target.value);
-            limiarValue.textContent = limiarDetecao;
-            resetarEstabilizacao();
-        });
-        
-        sensibilidadeSlider.addEventListener('input', (e) => {
-            sensibilidadeCirculo = parseFloat(e.target.value);
-            sensibilidadeValue.textContent = sensibilidadeCirculo.toFixed(2);
-        });
-        
-        estabilidadeSlider.addEventListener('input', (e) => {
-            framesParaEstabilizar = parseInt(e.target.value);
-            estabilidadeValue.textContent = framesParaEstabilizar;
-            resetarEstabilizacao();
-        });
-        
-        // Controles
-        document.getElementById('btnMoverCima').addEventListener('click', () => {
-            ajusteY -= 0.002;
-            atualizarInfo();
-            resetarCaptura();
-            resetarEstabilizacao();
-        });
-        document.getElementById('btnMoverBaixo').addEventListener('click', () => {
-            ajusteY += 0.002;
-            atualizarInfo();
-            resetarCaptura();
-            resetarEstabilizacao();
-        });
-        document.getElementById('btnMoverEsquerda').addEventListener('click', () => {
-            ajusteX -= 0.002;
-            atualizarInfo();
-            resetarCaptura();
-            resetarEstabilizacao();
-        });
-        document.getElementById('btnMoverDireita').addEventListener('click', () => {
-            ajusteX += 0.002;
-            atualizarInfo();
-            resetarCaptura();
-            resetarEstabilizacao();
-        });
-        document.getElementById('btnZoomMais').addEventListener('click', () => {
-            zoomGrade = Math.min(zoomGrade + 0.03, 1.3);
-            atualizarInfo();
-            resetarCaptura();
-            resetarEstabilizacao();
-        });
-        document.getElementById('btnZoomMenos').addEventListener('click', () => {
-            zoomGrade = Math.max(zoomGrade - 0.03, 0.8);
-            atualizarInfo();
-            resetarCaptura();
-            resetarEstabilizacao();
-        });
-        document.getElementById('btnResetAjuste').addEventListener('click', () => {
-            ajusteX = 0;
-            ajusteY = 0;
-            zoomGrade = 1.0;
-            margemInterna = 0.02;
-            atualizarInfo();
-            resetarCaptura();
-            resetarEstabilizacao();
-        });
-        
-        function atualizarInfo() {
-            document.getElementById('ajusteInfo').textContent = 
-                `Ajuste: X:${(ajusteX * 100).toFixed(1)}% | Y:${(ajusteY * 100).toFixed(1)}% | Zoom:${zoomGrade.toFixed(2)} | Estab:${framesEstaveis}/${framesParaEstabilizar}`;
-        }
-        
-        function resetarEstabilizacao() {
-            framesEstaveis = 0;
-            gradeEstavel = false;
-            historicoQuadrados = [];
-            cameraContainer.classList.remove('estavel');
-            deteccaoInfo.classList.remove('estavel');
-            if (!capturado) {
-                deteccaoInfo.textContent = '🔍 Aguardando estabilização...';
-            }
-        }
-        
-        function resetarCaptura() {
-            capturado = false;
-            resultadoCapturado = null;
-            cameraContainer.classList.remove('capturado');
-            badgeCaptura.classList.remove('visible');
-            document.getElementById('btnCapturar').textContent = '📸 CAPTURAR';
-            document.getElementById('btnCapturar').classList.remove('capturado');
-            resultadoPreview.classList.remove('capturado');
-            deteccaoInfo.classList.remove('capturado');
-            statusAlinhamento.classList.remove('capturado');
-        }
-        
-        // ========== BOTÃO CAPTURAR ==========
-        document.getElementById('btnCapturar').addEventListener('click', () => {
-            if (!provaAtual) {
-                alert('⚠️ Selecione uma prova primeiro!');
-                return;
-            }
-            
-            if (capturado) {
-                resetarCaptura();
-                return;
-            }
-            
-            if (ultimaDeteccao && ultimaDeteccao.quadrados && gradeEstavel) {
-                capturado = true;
-                resultadoCapturado = ultimaDeteccao.resultado;
-                
-                cameraContainer.classList.add('capturado');
-                badgeCaptura.classList.add('visible');
-                document.getElementById('btnCapturar').textContent = '🔄 RECAPTURAR';
-                document.getElementById('btnCapturar').classList.add('capturado');
-                resultadoPreview.classList.add('capturado');
-                deteccaoInfo.classList.add('capturado');
-                deteccaoInfo.textContent = '✅ CAPTURADO! Resultados finais.';
-                statusAlinhamento.classList.add('capturado');
-                statusAlinhamento.innerHTML = '✅ CAPTURADO!';
-                
-                exibirResultadoCapturado(resultadoCapturado);
-                pararLeitura();
-            } else {
-                alert('⚠️ Aguarde a estabilização da grade antes de capturar.');
-            }
-        });
-        
-        function exibirResultadoCapturado(resultado) {
-            if (!resultado) return;
-            
-            const { acertos, total, nota, detalhes } = resultado;
-            
-            resultadoPreview.style.display = 'block';
-            document.getElementById('acertosTempoReal').innerHTML = `✅ ${acertos} / ${total}`;
-            document.getElementById('notaTempoReal').innerHTML = `🎓 NOTA: ${nota.toFixed(1)}`;
-            
-            const grid = document.getElementById('respostasGrid');
-            grid.innerHTML = detalhes.map(d => `
-                <div class="resposta-item ${d.aluno === '⚪' ? 'resposta-nao-detectada' : (d.certo ? 'resposta-certa' : 'resposta-errada')}">
-                    ${d.num}<br>${d.aluno}
-                </div>
-            `).join('');
-        }
-        
-        // ========== FUNÇÕES SUPABASE ==========
-        async function garantirUsuarioExistente() {
-            const { data: existe } = await supabaseClient
-                .from('usuarios')
-                .select('id')
-                .eq('id', usuarioId)
-                .maybeSingle();
-            
-            if (!existe) {
-                await supabaseClient.from('usuarios').insert([{
-                    id: usuarioId,
-                    nome: usuarioNome || 'Professor',
-                    email: localStorage.getItem('usuario_email') || '',
-                    criado_em: new Date().toISOString()
-                }]);
-            }
-        }
-        
-        async function carregarProvasDoSupabase() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('provas')
-                    .select('*')
-                    .eq('usuario_id', usuarioId)
-                    .order('criado_em', { ascending: false });
-                
-                if (error) throw error;
-                
-                provas = data || [];
-                renderizarListaProvas();
-                
-                if (provas.length === 0) {
-                    document.getElementById('infoProva').innerHTML = '📋 Nenhuma prova';
-                } else if (!provaAtual) {
-                    await selecionarProva(provas[0].id);
-                }
-            } catch (err) {
-                console.error(err);
-            }
-        }
-        
-        async function selecionarProva(provaId) {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('provas')
-                    .select('*')
-                    .eq('id', provaId)
-                    .single();
-                
-                if (error) throw error;
-                
-                provaAtual = data;
-                NUM_QUESTOES = data.num_questoes;
-                gabarito = [...data.gabarito];
-                
-                document.getElementById('infoProva').innerHTML = `📋 ${provaAtual.nome_prova}`;
-                document.getElementById('infoGabarito').innerHTML = `✅ Gabarito`;
-                document.getElementById('infoGabarito').className = 'info-gabarito carregado';
-                document.getElementById('btnAbrirGabarito').disabled = false;
-                document.getElementById('modalProvas').style.display = 'none';
-                resetarCaptura();
-                resetarEstabilizacao();
-            } catch (err) {
-                console.error(err);
-            }
-        }
-        
-        async function salvarProva(nome, numQuestoes, numOpcoes, editId = null) {
-            const opcoes = Array(numOpcoes).fill().map((_, i) => String.fromCharCode(65 + i));
-            const novoGabarito = new Array(numQuestoes).fill(opcoes[0]);
-            
-            if (editId) {
-                await supabaseClient.from('provas').update({
-                    nome_prova: nome, num_questoes: numQuestoes,
-                    opcoes_por_questao: numOpcoes, gabarito: novoGabarito
-                }).eq('id', editId);
-            } else {
-                await supabaseClient.from('provas').insert([{
-                    usuario_id: usuarioId, nome_prova: nome,
-                    num_questoes: numQuestoes, opcoes_por_questao: numOpcoes,
-                    gabarito: novoGabarito
-                }]);
-            }
-            await carregarProvasDoSupabase();
-        }
-        
-        async function excluirProva(provaId) {
-            if (!confirm('Excluir esta prova?')) return;
-            await supabaseClient.from('provas').delete().eq('id', provaId);
-            if (provaAtual && provaAtual.id === provaId) {
-                provaAtual = null;
-                document.getElementById('btnAbrirGabarito').disabled = true;
-            }
-            await carregarProvasDoSupabase();
-        }
-        
-        async function salvarGabaritoProvaAtual() {
-            if (!provaAtual) return;
-            await supabaseClient.from('provas').update({ gabarito: gabarito }).eq('id', provaAtual.id);
-            alert('✅ Gabarito salvo!');
-            document.getElementById('modalGabarito').style.display = 'none';
-        }
-        
-        function renderizarListaProvas() {
-            const container = document.getElementById('listaProvas');
-            if (provas.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Nenhuma prova</div>';
-                return;
-            }
-            container.innerHTML = provas.map(prova => `
-                <div class="prova-item" data-id="${prova.id}">
-                    <div class="prova-info">
-                        <div class="prova-nome">${prova.nome_prova}</div>
-                        <div class="prova-detalhes">${prova.num_questoes} questões</div>
-                    </div>
-                    <div class="prova-acoes">
-                        <button class="btn-editar-prova" data-id="${prova.id}">✏️</button>
-                        <button class="btn-excluir-prova" data-id="${prova.id}">🗑️</button>
-                    </div>
-                </div>
-            `).join('');
-            
-            document.querySelectorAll('.prova-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    if (!e.target.classList.contains('btn-editar-prova') && !e.target.classList.contains('btn-excluir-prova')) {
-                        selecionarProva(item.dataset.id);
-                    }
-                });
-            });
-            
-            document.querySelectorAll('.btn-editar-prova').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const prova = provas.find(p => p.id == btn.dataset.id);
-                    if (prova) {
-                        document.getElementById('provaNome').value = prova.nome_prova;
-                        document.getElementById('provaNumQuestoes').value = prova.num_questoes;
-                        document.getElementById('provaNumOpcoes').value = prova.opcoes_por_questao || 4;
-                        document.getElementById('modalEditarTitulo').innerHTML = '✏️ Editar Prova';
-                        document.getElementById('modalEditarProva').dataset.editId = prova.id;
-                        document.getElementById('modalEditarProva').style.display = 'block';
-                        document.getElementById('modalProvas').style.display = 'none';
-                    }
-                });
-            });
-            
-            document.querySelectorAll('.btn-excluir-prova').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    await excluirProva(btn.dataset.id);
-                });
-            });
-        }
-        
-        function renderizarModalGabarito() {
-            const container = document.getElementById('gabaritoLista');
-            container.innerHTML = '';
-            for (let i = 0; i < NUM_QUESTOES; i++) {
-                const div = document.createElement('div');
-                div.className = 'gab-item';
-                div.innerHTML = `<label>Q${i+1}</label>
-                    <select id="gabSelect_${i}" data-questao="${i}">
-                        ${OPCOES.map(op => `<option value="${op}" ${gabarito[i] === op ? 'selected' : ''}>${op}</option>`).join('')}
-                    </select>`;
-                container.appendChild(div);
-            }
-            for (let i = 0; i < NUM_QUESTOES; i++) {
-                document.getElementById(`gabSelect_${i}`)?.addEventListener('change', (e) => {
-                    gabarito[parseInt(e.target.dataset.questao)] = e.target.value;
-                });
-            }
-        }
-        
-        // ========== DETECÇÃO DE QUADRADOS ==========
-        function detectarQuadrados(imageData, width, height) {
-            const dados = new Uint8ClampedArray(imageData.data);
-            const limiar = limiarDetecao;
-            
-            const pontosEscuros = [];
-            const step = 2;
-            
-            for (let y = 0; y < height - step; y += step) {
-                for (let x = 0; x < width - step; x += step) {
-                    const idx = (y * width + x) * 4;
-                    const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
-                    if (brilho < limiar) {
-                        pontosEscuros.push({ x, y });
-                    }
-                }
-            }
-            
-            if (pontosEscuros.length < 20) return null;
-            
-            const raioAgrupamento = Math.min(width, height) * 0.025;
-            const grupos = [];
-            
-            for (const p of pontosEscuros) {
-                let encontrado = false;
-                for (const g of grupos) {
-                    const dx = p.x - g.cx;
-                    const dy = p.y - g.cy;
-                    if (dx*dx + dy*dy < raioAgrupamento * raioAgrupamento) {
-                        g.cx = (g.cx * g.count + p.x) / (g.count + 1);
-                        g.cy = (g.cy * g.count + p.y) / (g.count + 1);
-                        g.count++;
-                        encontrado = true;
-                        break;
-                    }
-                }
-                if (!encontrado) {
-                    grupos.push({ cx: p.x, cy: p.y, count: 1 });
-                }
-            }
-            
-            const gruposFiltrados = grupos.filter(g => g.count > 15);
-            
-            const quadrados = [];
-            const tamanhoMin = Math.min(width, height) * 0.02;
-            const tamanhoMax = Math.min(width, height) * 0.08;
-            
-            for (const g of gruposFiltrados) {
-                const cx = Math.round(g.cx);
-                const cy = Math.round(g.cy);
-                
-                let esquerda = cx, direita = cx;
-                let topo = cy, baixo = cy;
-                
-                for (let x = cx - 1; x >= 0; x--) {
-                    const idx = (cy * width + x) * 4;
-                    const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
-                    if (brilho < limiar) esquerda = x;
-                    else break;
-                }
-                
-                for (let x = cx + 1; x < width; x++) {
-                    const idx = (cy * width + x) * 4;
-                    const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
-                    if (brilho < limiar) direita = x;
-                    else break;
-                }
-                
-                for (let y = cy - 1; y >= 0; y--) {
-                    const idx = (y * width + cx) * 4;
-                    const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
-                    if (brilho < limiar) topo = y;
-                    else break;
-                }
-                
-                for (let y = cy + 1; y < height; y++) {
-                    const idx = (y * width + cx) * 4;
-                    const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
-                    if (brilho < limiar) baixo = y;
-                    else break;
-                }
-                
-                const largura = direita - esquerda + 1;
-                const altura = baixo - topo + 1;
-                
-                if (largura > tamanhoMin && largura < tamanhoMax &&
-                    altura > tamanhoMin && altura < tamanhoMax) {
-                    const proporcao = Math.min(largura, altura) / Math.max(largura, altura);
-                    if (proporcao > 0.65) {
-                        quadrados.push({
-                            x: (esquerda + direita) / 2,
-                            y: (topo + baixo) / 2,
-                            esquerda: esquerda,
-                            direita: direita,
-                            topo: topo,
-                            baixo: baixo,
-                            largura: largura,
-                            altura: altura
-                        });
-                    }
-                }
-            }
-            
-            if (quadrados.length < 4) return null;
-            
-            quadrados.sort((a, b) => a.y - b.y);
-            const metade = Math.floor(quadrados.length / 2);
-            const superiores = quadrados.slice(0, metade);
-            const inferiores = quadrados.slice(metade);
-            
-            superiores.sort((a, b) => a.x - b.x);
-            inferiores.sort((a, b) => a.x - b.x);
-            
-            if (superiores.length < 2 || inferiores.length < 2) return null;
-            
-            const resultado = {
-                superiorEsquerdo: superiores[0],
-                superiorDireito: superiores[superiores.length - 1],
-                inferiorEsquerdo: inferiores[0],
-                inferiorDireito: inferiores[inferiores.length - 1]
-            };
-            
-            const larguraTotal = resultado.superiorDireito.x - resultado.superiorEsquerdo.x;
-            const alturaTotal = resultado.inferiorEsquerdo.y - resultado.superiorEsquerdo.y;
-            
-            if (larguraTotal < width * 0.3 || alturaTotal < height * 0.3) return null;
-            
-            return resultado;
-        }
-        
-        // ========== FUNÇÃO PARA CALCULAR MÉDIA DOS QUADRADOS ==========
-        function calcularMediaQuadrados(historico) {
-            if (historico.length === 0) return null;
-            
-            const media = {
-                superiorEsquerdo: { x: 0, y: 0, esquerda: 0, topo: 0, direita: 0, baixo: 0 },
-                superiorDireito: { x: 0, y: 0, esquerda: 0, topo: 0, direita: 0, baixo: 0 },
-                inferiorEsquerdo: { x: 0, y: 0, esquerda: 0, topo: 0, direita: 0, baixo: 0 },
-                inferiorDireito: { x: 0, y: 0, esquerda: 0, topo: 0, direita: 0, baixo: 0 }
-            };
-            
-            const keys = ['superiorEsquerdo', 'superiorDireito', 'inferiorEsquerdo', 'inferiorDireito'];
-            
-            for (const key of keys) {
-                for (const item of historico) {
-                    const q = item[key];
-                    media[key].x += q.x;
-                    media[key].y += q.y;
-                    media[key].esquerda += q.esquerda;
-                    media[key].topo += q.topo;
-                    media[key].direita += q.direita;
-                    media[key].baixo += q.baixo;
-                }
-                media[key].x /= historico.length;
-                media[key].y /= historico.length;
-                media[key].esquerda /= historico.length;
-                media[key].topo /= historico.length;
-                media[key].direita /= historico.length;
-                media[key].baixo /= historico.length;
-            }
-            
-            return media;
-        }
-        
-        // ========== CÂMERA ==========
+        // Iniciar câmera
         async function iniciarCamera() {
-            if (stream) stream.getTracks().forEach(track => track.stop());
-            statusAlinhamento.innerHTML = '📷 Solicitando câmera...';
-            
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { exact: "environment" }, width: { ideal: 1080 }, height: { ideal: 1920 } }
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
                 });
                 video.srcObject = stream;
-                await new Promise(resolve => { video.onloadedmetadata = () => { video.play(); resolve(); }; });
-                statusAlinhamento.innerHTML = '🟡 Posicione a folha para estabilização';
-                document.getElementById('btnCorrigirAuto').disabled = false;
-            } catch (err) {
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    video.srcObject = stream;
-                    await video.play();
-                    statusAlinhamento.innerHTML = '🟡 Posicione a folha';
-                } catch (e) {
-                    statusAlinhamento.innerHTML = '❌ Erro na câmera';
-                }
+                await video.play();
+                status.innerHTML = '🟡 Posicione a folha e clique em CORRIGIR';
+            } catch(e) {
+                status.innerHTML = '❌ Erro na câmera: ' + e.message;
             }
         }
         
-        function iniciarLeitura() {
-            if (capturado) {
-                if (resultadoCapturado) {
-                    exibirResultadoCapturado(resultadoCapturado);
-                }
+        // Capturar e analisar
+        function capturar() {
+            if (!video.videoWidth) {
+                alert('Aguarde a câmera iniciar');
                 return;
             }
             
-            if (frameInterval) clearInterval(frameInterval);
-            leituraAtiva = true;
-            document.getElementById('btnCorrigirAuto').innerHTML = '⏹️ Parar';
-            document.getElementById('btnCorrigirAuto').classList.add('ativo');
-            frameInterval = setInterval(() => {
-                if (leituraAtiva && video.videoWidth > 0 && provaAtual) processarFrame();
-            }, 300);
-        }
-        
-        function pararLeitura() {
-            if (frameInterval) clearInterval(frameInterval);
-            leituraAtiva = false;
-            document.getElementById('btnCorrigirAuto').innerHTML = '🎯 Prévia';
-            document.getElementById('btnCorrigirAuto').classList.remove('ativo');
-            if (!capturado) {
-                const ctx = overlayCanvas.getContext('2d');
-                if (ctx) ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-            }
-        }
-        
-        function processarFrame() {
-            if (!provaAtual || !video.videoWidth) return;
+            corrigindo = true;
+            status.innerHTML = '📷 Analisando...';
             
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = video.videoWidth;
-            tempCanvas.height = video.videoHeight;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            // Captura o frame
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
             
-            const targetWidth = 1200;
-            const scale = targetWidth / tempCanvas.width;
-            const targetHeight = Math.floor(tempCanvas.height * scale);
+            // Reduz para processar
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const dados = imgData.data;
             
-            const canvas = document.createElement('canvas');
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(tempCanvas, 0, 0, targetWidth, targetHeight);
+            // Área de detecção (centro da imagem)
+            const w = canvas.width;
+            const h = canvas.height;
             
-            overlayCanvas.width = targetWidth;
-            overlayCanvas.height = targetHeight;
-            const overlayCtx = overlayCanvas.getContext('2d');
+            // Posição da grade - você precisa ajustar estas coordenadas
+            // para sua folha específica
+            const xInicio = w * 0.15;
+            const xFim = w * 0.85;
+            const yInicio = h * 0.25;
+            const yFim = h * 0.85;
             
-            const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
+            const colunas = 2;
+            const linhas = 20;
+            const cellW = (xFim - xInicio) / colunas;
+            const cellH = (yFim - yInicio) / linhas;
             
-            overlayCtx.clearRect(0, 0, targetWidth, targetHeight);
-            overlayCtx.globalAlpha = 0.85;
+            // Opções por questão (4)
+            const opcoes = ['A', 'B', 'C', 'D'];
+            const opcaoW = cellW / (opcoes.length + 0.5);
+            const raio = Math.min(cellW, cellH) * 0.08;
             
-            const quadrados = detectarQuadrados(imageData, targetWidth, targetHeight);
+            let respostas = [];
+            let detectadas = 0;
             
-            if (quadrados) {
-                quadradosDetectados = true;
-                
-                // Adiciona ao histórico
-                historicoQuadrados.push(quadrados);
-                if (historicoQuadrados.length > MAX_HISTORICO) {
-                    historicoQuadrados.shift();
-                }
-                
-                // Verifica estabilidade
-                if (historicoQuadrados.length >= framesParaEstabilizar) {
-                    // Verifica se os quadrados estão estáveis (variação pequena)
-                    const primeiro = historicoQuadrados[0];
-                    const ultimo = historicoQuadrados[historicoQuadrados.length - 1];
+            // Para cada questão
+            for (let linha = 0; linha < linhas; linha++) {
+                for (let col = 0; col < colunas; col++) {
+                    const idx = linha * colunas + col;
+                    if (idx >= GABARITO.length) break;
                     
-                    const dx = Math.abs(primeiro.superiorEsquerdo.x - ultimo.superiorEsquerdo.x);
-                    const dy = Math.abs(primeiro.superiorEsquerdo.y - ultimo.superiorEsquerdo.y);
-                    const limite = Math.min(targetWidth, targetHeight) * 0.01;
+                    const cellX = xInicio + col * cellW;
+                    const cellY = yInicio + linha * cellH;
                     
-                    if (dx < limite && dy < limite) {
-                        framesEstaveis++;
-                    } else {
-                        framesEstaveis = Math.max(0, framesEstaveis - 1);
-                    }
-                }
-                
-                // Usa a média dos quadrados se estável
-                let quadradosUsar = quadrados;
-                if (framesEstaveis >= framesParaEstabilizar && historicoQuadrados.length >= framesParaEstabilizar) {
-                    const media = calcularMediaQuadrados(historicoQuadrados);
-                    if (media) {
-                        quadradosUsar = media;
-                        gradeEstavel = true;
-                        cameraContainer.classList.add('estavel');
-                        deteccaoInfo.classList.add('estavel');
-                        deteccaoInfo.textContent = `✅ ESTÁVEL! ${framesEstaveis}/${framesParaEstabilizar} frames`;
-                        statusAlinhamento.className = 'status-alinhamento estavel';
-                        statusAlinhamento.innerHTML = '✅ Grade estabilizada! Pronto para CAPTURAR';
-                    }
-                } else {
-                    gradeEstavel = false;
-                    cameraContainer.classList.remove('estavel');
-                    deteccaoInfo.classList.remove('estavel');
-                    deteccaoInfo.textContent = `🔄 Estabilizando... ${framesEstaveis}/${framesParaEstabilizar}`;
-                    statusAlinhamento.className = 'status-alinhamento detected';
-                    statusAlinhamento.innerHTML = '🔄 Aguardando estabilização...';
-                }
-                
-                // Desenha os quadrados detectados em AZUL
-                const quadradosArray = [quadradosUsar.superiorEsquerdo, quadradosUsar.superiorDireito, 
-                                       quadradosUsar.inferiorEsquerdo, quadradosUsar.inferiorDireito];
-                for (const q of quadradosArray) {
-                    overlayCtx.strokeStyle = '#00ccff';
-                    overlayCtx.lineWidth = 3;
-                    overlayCtx.strokeRect(
-                        q.esquerda, 
-                        q.topo, 
-                        q.direita - q.esquerda, 
-                        q.baixo - q.topo
-                    );
-                    overlayCtx.fillStyle = '#00ccff';
-                    overlayCtx.beginPath();
-                    overlayCtx.arc(q.x, q.y, 5, 0, 2 * Math.PI);
-                    overlayCtx.fill();
-                }
-                
-                // ===== ALINHAMENTO =====
-                const topY = Math.min(quadradosUsar.superiorEsquerdo.topo, quadradosUsar.superiorDireito.topo);
-                const bottomY = Math.max(quadradosUsar.inferiorEsquerdo.baixo, quadradosUsar.inferiorDireito.baixo);
-                const leftX = Math.min(quadradosUsar.superiorEsquerdo.esquerda, quadradosUsar.inferiorEsquerdo.esquerda);
-                const rightX = Math.max(quadradosUsar.superiorDireito.direita, quadradosUsar.inferiorDireito.direita);
-                
-                const margem = margemInterna;
-                const larguraTotal = rightX - leftX;
-                const alturaTotal = bottomY - topY;
-                
-                const zoom = zoomGrade;
-                const centroX = (leftX + rightX) / 2 + (ajusteX * targetWidth);
-                const centroY = (topY + bottomY) / 2 + (ajusteY * targetHeight);
-                const larguraZoom = larguraTotal * zoom;
-                const alturaZoom = alturaTotal * zoom;
-                
-                const areaEsquerda = centroX - (larguraZoom / 2) + (larguraZoom * margem);
-                const areaDireita = centroX + (larguraZoom / 2) - (larguraZoom * margem);
-                const areaTopo = centroY - (alturaZoom / 2) + (alturaZoom * margem);
-                const areaBaixo = centroY + (alturaZoom / 2) - (alturaZoom * margem);
-                
-                // Atualiza info com as medidas da folha
-                const larguraCm = ((areaDireita - areaEsquerda) / targetWidth * 20).toFixed(1);
-                const alturaCm = ((areaBaixo - areaTopo) / targetHeight * 25).toFixed(1);
-                if (gradeEstavel) {
-                    deteccaoInfo.textContent = `✅ ESTÁVEL! Folha: ${larguraCm}cm x ${alturaCm}cm`;
-                }
-                
-                const cellWidth = (areaDireita - areaEsquerda) / COLUNAS_QUESTOES;
-                const cellHeight = (areaBaixo - areaTopo) / LINHAS_QUESTOES;
-                const opcaoWidth = cellWidth / (NUM_OPCOES + 0.7);
-                const circleRadius = Math.min(cellWidth, cellHeight) * 0.10;
-                
-                // Área dos números (ignorar)
-                const areaNumeros = cellWidth * 0.18;
-                
-                // Grade VERMELHA
-                overlayCtx.strokeStyle = '#ff0000';
-                overlayCtx.lineWidth = 3;
-                overlayCtx.strokeRect(areaEsquerda, areaTopo, areaDireita - areaEsquerda, areaBaixo - areaTopo);
-                
-                overlayCtx.strokeStyle = '#ff6666';
-                overlayCtx.lineWidth = 1;
-                const xMeio = areaEsquerda + cellWidth;
-                overlayCtx.beginPath();
-                overlayCtx.moveTo(xMeio, areaTopo);
-                overlayCtx.lineTo(xMeio, areaBaixo);
-                overlayCtx.stroke();
-                
-                for (let i = 1; i < LINHAS_QUESTOES; i++) {
-                    const y = areaTopo + i * cellHeight;
-                    overlayCtx.beginPath();
-                    overlayCtx.moveTo(areaEsquerda, y);
-                    overlayCtx.lineTo(areaDireita, y);
-                    overlayCtx.stroke();
-                }
-                
-                // ===== DETECÇÃO DAS RESPOSTAS =====
-                const dados = new Uint8ClampedArray(imageData.data);
-                
-                function verificarPreenchimentoCirculo(cx, cy, raio) {
-                    const raioTest = raio * 0.65;
-                    let totalCentro = 0;
-                    let escurosCentro = 0;
+                    let melhorOpcao = -1;
+                    let maiorPreenchimento = 0;
+                    let totalPreenchidas = 0;
                     
-                    for (let dy = -raioTest; dy <= raioTest; dy += 1.5) {
-                        for (let dx = -raioTest; dx <= raioTest; dx += 1.5) {
-                            if (dx*dx + dy*dy <= raioTest * raioTest) {
-                                totalCentro++;
-                                const px = cx + dx;
-                                const py = cy + dy;
-                                if (px >= 0 && px < targetWidth && py >= 0 && py < targetHeight) {
-                                    const idx = (Math.floor(py) * targetWidth + Math.floor(px)) * 4;
-                                    const brilho = (dados[idx] * 0.299 + dados[idx+1] * 0.587 + dados[idx+2] * 0.114);
-                                    if (brilho < limiarDetecao * 1.1) {
-                                        escurosCentro++;
+                    // Verifica cada opção
+                    for (let opt = 0; opt < opcoes.length; opt++) {
+                        const ox = cellX + (opt + 0.6) * opcaoW;
+                        const oy = cellY + cellH / 2;
+                        
+                        // Conta pixels escuros no círculo
+                        let escuros = 0;
+                        let total = 0;
+                        for (let dy = -raio; dy <= raio; dy += 1.5) {
+                            for (let dx = -raio; dx <= raio; dx += 1.5) {
+                                if (dx*dx + dy*dy <= raio*raio) {
+                                    total++;
+                                    const px = Math.floor(ox + dx);
+                                    const py = Math.floor(oy + dy);
+                                    if (px >= 0 && px < w && py >= 0 && py < h) {
+                                        const idx2 = (py * w + px) * 4;
+                                        const brilho = (dados[idx2] + dados[idx2+1] + dados[idx2+2]) / 3;
+                                        if (brilho < 80) escuros++;
                                     }
                                 }
                             }
                         }
-                    }
-                    
-                    let totalBorda = 0;
-                    let escurosBorda = 0;
-                    const raioBorda = raio * 0.85;
-                    for (let ang = 0; ang < 360; ang += 10) {
-                        const rad = ang * Math.PI / 180;
-                        const px = cx + Math.cos(rad) * raioBorda;
-                        const py = cy + Math.sin(rad) * raioBorda;
-                        if (px >= 0 && px < targetWidth && py >= 0 && py < targetHeight) {
-                            totalBorda++;
-                            const idx = (Math.floor(py) * targetWidth + Math.floor(px)) * 4;
-                            const brilho = (dados[idx] * 0.299 + dados[idx+1] * 0.587 + dados[idx+2] * 0.114);
-                            if (brilho < limiarDetecao * 1.15) {
-                                escurosBorda++;
+                        
+                        const pct = total > 0 ? escuros / total : 0;
+                        
+                        if (pct > 0.18) {
+                            totalPreenchidas++;
+                            if (pct > maiorPreenchimento) {
+                                maiorPreenchimento = pct;
+                                melhorOpcao = opt;
                             }
                         }
                     }
                     
-                    const pctCentro = totalCentro > 0 ? escurosCentro / totalCentro : 0;
-                    const pctBorda = totalBorda > 0 ? escurosBorda / totalBorda : 0;
-                    const preenchimento = (pctCentro + pctBorda) / 2;
-                    
-                    const estaPreenchido = preenchimento > sensibilidadeCirculo && 
-                                          pctCentro > 0.15 && 
-                                          pctBorda > 0.15;
-                    
-                    return { preenchimento, estaPreenchido, pctCentro, pctBorda };
-                }
-                
-                const respostas = [];
-                let questoesDetectadas = 0;
-                let questaoIndex = 0;
-                
-                for (let linha = 0; linha < LINHAS_QUESTOES; linha++) {
-                    for (let coluna = 0; coluna < COLUNAS_QUESTOES; coluna++) {
-                        if (questaoIndex >= NUM_QUESTOES) break;
-                        
-                        const cellX = areaEsquerda + coluna * cellWidth;
-                        const cellY = areaTopo + linha * cellHeight;
-                        
-                        const numeroX = cellX + areaNumeros / 2;
-                        const numeroY = cellY + cellHeight / 2;
-                        
-                        let melhorOpcao = -1;
-                        let maiorPreenchimento = 0;
-                        let totalPreenchidas = 0;
-                        
-                        for (let opt = 0; opt < NUM_OPCOES; opt++) {
-                            const opcaoX = cellX + (opt + 0.6) * opcaoWidth;
-                            const opcaoY = cellY + cellHeight / 2;
-                            
-                            const distNumero = Math.sqrt((opcaoX - numeroX)**2 + (opcaoY - numeroY)**2);
-                            if (distNumero < areaNumeros * 0.6) {
-                                overlayCtx.beginPath();
-                                overlayCtx.arc(opcaoX, opcaoY, circleRadius * 0.5, 0, 2 * Math.PI);
-                                overlayCtx.strokeStyle = '#444';
-                                overlayCtx.stroke();
-                                continue;
-                            }
-                            
-                            const resultado = verificarPreenchimentoCirculo(opcaoX, opcaoY, circleRadius);
-                            
-                            overlayCtx.beginPath();
-                            overlayCtx.arc(opcaoX, opcaoY, circleRadius, 0, 2 * Math.PI);
-                            
-                            if (resultado.estaPreenchido) {
-                                const intensidade = Math.min(resultado.preenchimento * 1.5, 0.9);
-                                overlayCtx.fillStyle = `rgba(0, 255, 0, ${intensidade})`;
-                                overlayCtx.fill();
-                                overlayCtx.strokeStyle = '#00ff00';
-                                totalPreenchidas++;
-                                if (resultado.preenchimento > maiorPreenchimento) {
-                                    maiorPreenchimento = resultado.preenchimento;
-                                    melhorOpcao = opt;
-                                }
-                            } else {
-                                overlayCtx.strokeStyle = '#ff8888';
-                                if (resultado.preenchimento > 0.08) {
-                                    overlayCtx.fillStyle = `rgba(255, 255, 0, ${resultado.preenchimento * 0.15})`;
-                                    overlayCtx.fill();
-                                }
-                            }
-                            overlayCtx.stroke();
-                        }
-                        
-                        const numQuestao = questaoIndex + 1;
-                        overlayCtx.font = `bold ${Math.max(10, circleRadius + 3)}px Arial`;
-                        overlayCtx.fillStyle = '#ffff00';
-                        overlayCtx.textAlign = 'left';
-                        overlayCtx.textBaseline = 'top';
-                        overlayCtx.fillText(`${numQuestao}`, cellX + 3, cellY + 3);
-                        
-                        if (totalPreenchidas === 1 && melhorOpcao >= 0) {
-                            respostas.push(OPCOES[melhorOpcao]);
-                            questoesDetectadas++;
-                            overlayCtx.fillStyle = 'rgba(0,255,0,0.07)';
-                            overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
-                        } else if (totalPreenchidas > 1) {
-                            respostas.push(null);
-                            overlayCtx.fillStyle = 'rgba(255,255,0,0.07)';
-                            overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
-                        } else {
-                            respostas.push(null);
-                            overlayCtx.fillStyle = 'rgba(255,0,0,0.03)';
-                            overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
-                        }
-                        
-                        questaoIndex++;
-                    }
-                    if (questaoIndex >= NUM_QUESTOES) break;
-                }
-                
-                let acertos = 0;
-                const detalhes = [];
-                for (let i = 0; i < NUM_QUESTOES; i++) {
-                    const aluno = respostas[i];
-                    const correto = gabarito[i];
-                    if (aluno === null) {
-                        detalhes.push({ num: i+1, aluno: '⚪', certo: false });
+                    if (totalPreenchidas === 1 && melhorOpcao >= 0) {
+                        respostas.push(opcoes[melhorOpcao]);
+                        detectadas++;
                     } else {
-                        const certo = (aluno === correto);
-                        if (certo) acertos++;
-                        detalhes.push({ num: i+1, aluno: aluno, certo: certo });
+                        respostas.push(null);
                     }
                 }
-                
-                const nota = (acertos / NUM_QUESTOES) * 10;
-                const resultado = {
-                    acertos,
-                    total: NUM_QUESTOES,
-                    nota,
-                    detalhes,
-                    questoesDetectadas
-                };
-                
-                ultimaDeteccao = {
-                    quadrados: quadradosUsar,
-                    resultado: resultado
-                };
-                
-                resultadoPreview.style.display = 'block';
-                document.getElementById('acertosTempoReal').innerHTML = `✅ ${acertos} / ${NUM_QUESTOES}`;
-                document.getElementById('notaTempoReal').innerHTML = `🎓 NOTA: ${nota.toFixed(1)} (Prévia)`;
-                
-                const grid = document.getElementById('respostasGrid');
-                grid.innerHTML = detalhes.map(d => `
-                    <div class="resposta-item ${d.aluno === '⚪' ? 'resposta-nao-detectada' : (d.certo ? 'resposta-certa' : 'resposta-errada')}">
-                        ${d.num}<br>${d.aluno}
-                    </div>
-                `).join('');
-                
-                const pctDetectado = (questoesDetectadas / NUM_QUESTOES) * 100;
-                if (pctDetectado > 80 && gradeEstavel) {
-                    statusAlinhamento.innerHTML = `✅ ${questoesDetectadas}/${NUM_QUESTOES} - Pronto para CAPTURAR`;
-                    statusAlinhamento.className = 'status-alinhamento good';
-                } else if (pctDetectado > 50) {
-                    statusAlinhamento.innerHTML = `🟡 ${questoesDetectadas}/${NUM_QUESTOES} - Aguardando estabilização`;
-                    statusAlinhamento.className = 'status-alinhamento warning';
-                } else {
-                    statusAlinhamento.innerHTML = `🔴 ${questoesDetectadas}/${NUM_QUESTOES} - Verifique a folha`;
-                    statusAlinhamento.className = '';
-                }
-                
-            } else {
-                quadradosDetectados = false;
-                gradeEstavel = false;
-                framesEstaveis = 0;
-                historicoQuadrados = [];
-                cameraContainer.classList.remove('estavel');
-                deteccaoInfo.classList.remove('estavel');
-                deteccaoInfo.textContent = '🔴 Aguardando quadrados... Posicione a folha corretamente.';
-                statusAlinhamento.innerHTML = '🔴 Posicione a folha para alinhamento automático';
-                statusAlinhamento.className = 'status-alinhamento error';
-                ultimaDeteccao = null;
-                
-                overlayCtx.fillStyle = 'rgba(255,0,0,0.08)';
-                overlayCtx.fillRect(0, 0, targetWidth, targetHeight);
-                overlayCtx.fillStyle = '#ff4444';
-                overlayCtx.font = '24px Arial';
-                overlayCtx.textAlign = 'center';
-                overlayCtx.textBaseline = 'middle';
-                overlayCtx.fillText('⏳ Posicione a folha', targetWidth/2, targetHeight/2 - 20);
-                overlayCtx.font = '16px Arial';
-                overlayCtx.fillStyle = '#ff8888';
-                overlayCtx.fillText('Os 4 quadrados pretos devem estar visíveis', targetWidth/2, targetHeight/2 + 30);
             }
             
-            atualizarInfo();
+            // Calcula resultado
+            let acertos = 0;
+            const detalhes = [];
+            for (let i = 0; i < GABARITO.length; i++) {
+                const aluno = respostas[i] || '⚪';
+                const correto = GABARITO[i];
+                if (aluno === correto) acertos++;
+                detalhes.push({
+                    num: i+1,
+                    aluno: aluno,
+                    certo: aluno === correto
+                });
+            }
+            
+            const nota = (acertos / GABARITO.length) * 10;
+            
+            // Mostra resultado
+            resultado.style.display = 'block';
+            notaDiv.textContent = `🎓 NOTA: ${nota.toFixed(1)} (${acertos}/${GABARITO.length})`;
+            
+            gridDiv.innerHTML = detalhes.map(d => `
+                <div class="item ${d.aluno === '⚪' ? 'vazio' : (d.certo ? 'certa' : 'errada')}">
+                    ${d.num}<br>${d.aluno}
+                </div>
+            `).join('');
+            
+            status.innerHTML = `✅ ${detectadas}/${GABARITO.length} detectadas | NOTA: ${nota.toFixed(1)}`;
+            corrigindo = false;
         }
         
-        // ========== EVENTOS ==========
-        document.getElementById('btnCorrigirAuto').addEventListener('click', () => {
-            if (leituraAtiva) {
-                pararLeitura();
-            } else {
-                if (capturado) {
-                    if (resultadoCapturado) {
-                        exibirResultadoCapturado(resultadoCapturado);
-                    }
-                    return;
-                }
-                iniciarLeitura();
-            }
+        // Eventos
+        document.getElementById('btnCorrigir').addEventListener('click', () => {
+            if (!corrigindo) capturar();
         });
         
-        document.getElementById('btnGerenciarProvas').addEventListener('click', () => {
-            renderizarListaProvas();
-            document.getElementById('modalProvas').style.display = 'block';
-        });
-        
-        document.getElementById('btnNovaProva').addEventListener('click', () => {
-            document.getElementById('provaNome').value = '';
-            document.getElementById('provaNumQuestoes').value = 40;
-            document.getElementById('provaNumOpcoes').value = 4;
-            document.getElementById('modalEditarTitulo').innerHTML = '📝 Criar Prova';
-            delete document.getElementById('modalEditarProva').dataset.editId;
-            document.getElementById('modalEditarProva').style.display = 'block';
-            document.getElementById('modalProvas').style.display = 'none';
-        });
-        
-        document.getElementById('btnCriarProva').addEventListener('click', async () => {
-            const nome = document.getElementById('provaNome').value.trim();
-            const numQuestoes = parseInt(document.getElementById('provaNumQuestoes').value);
-            const numOpcoes = parseInt(document.getElementById('provaNumOpcoes').value);
-            if (!nome) { alert('Digite um nome!'); return; }
-            const editId = document.getElementById('modalEditarProva').dataset.editId;
-            await salvarProva(nome, numQuestoes, numOpcoes, editId);
-            document.getElementById('modalEditarProva').style.display = 'none';
-            alert(`✅ Prova "${nome}" salva!`);
-            resetarCaptura();
-            resetarEstabilizacao();
-        });
-        
-        document.getElementById('btnFecharProvas').addEventListener('click', () => {
-            document.getElementById('modalProvas').style.display = 'none';
-        });
-        
-        document.getElementById('btnCancelarEdicao').addEventListener('click', () => {
-            document.getElementById('modalEditarProva').style.display = 'none';
-        });
-        
-        document.getElementById('btnAbrirGabarito').addEventListener('click', () => {
-            if (!provaAtual) { alert('Selecione uma prova!'); return; }
-            renderizarModalGabarito();
-            document.getElementById('modalGabarito').style.display = 'block';
-        });
-        
-        document.getElementById('btnSalvarGabarito').addEventListener('click', async () => {
-            await salvarGabaritoProvaAtual();
-        });
-        
-        document.getElementById('btnFecharGabarito').addEventListener('click', () => {
-            document.getElementById('modalGabarito').style.display = 'none';
-        });
-        
-        document.getElementById('btnResetGabarito').addEventListener('click', () => {
-            if (confirm('Resetar gabarito?')) {
-                gabarito = new Array(NUM_QUESTOES).fill('A');
-                renderizarModalGabarito();
-            }
-        });
-        
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
-        });
-        
-        document.getElementById('btnSair').addEventListener('click', () => {
-            pararLeitura();
-            if (stream) stream.getTracks().forEach(t => t.stop());
-            localStorage.clear();
-            window.location.href = 'index.html';
-        });
-        
-        async function iniciar() {
-            await garantirUsuarioExistente();
-            await carregarProvasDoSupabase();
-            iniciarCamera();
-        }
-        
-        iniciar();
+        // Iniciar
+        iniciarCamera();
     </script>
 </body>
 </html>
