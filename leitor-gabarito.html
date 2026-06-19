@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Leitor de Gabarito - Detecção Aprimorada</title>
+    <title>Leitor de Gabarito - Grade Ajustada</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -279,20 +279,25 @@
             font-size: 0.65rem;
             padding: 4px;
         }
-        .ajuste-manual {
-            background: rgba(255, 100, 0, 0.2);
-            border: 1px solid #ff8800;
-            border-radius: 12px;
-            padding: 8px;
-            margin-top: 8px;
+        .toggle-label {
+            color: white;
+            font-size: 0.65rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
         }
-        .ajuste-manual label { color: #ffaa00; font-size: 0.7rem; }
+        .toggle-label input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📸 Leitor de Gabarito - Detecção Aprimorada</h1>
+            <h1>📸 Leitor de Gabarito - Grade Ajustada</h1>
         </div>
         
         <div class="info-usuario" id="infoUsuario">Carregando...</div>
@@ -304,7 +309,7 @@
         </div>
         
         <div class="instrucao" id="instrucao">
-            💡 Posicione a folha. Os quadrados pretos serão destacados em AZUL quando detectados.
+            💡 Posicione a folha. Os quadrados pretos serão destacados em AZUL.
         </div>
         
         <div class="camera-container">
@@ -319,9 +324,11 @@
             <button class="btn-ajuste" id="btnMoverBaixo">⬇</button>
             <button class="btn-ajuste" id="btnMoverEsquerda">⬅</button>
             <button class="btn-ajuste" id="btnMoverDireita">➡</button>
+            <button class="btn-ajuste" id="btnZoomMais">🔍+</button>
+            <button class="btn-ajuste" id="btnZoomMenos">🔍-</button>
             <button class="btn-ajuste-reset" id="btnResetAjuste">⟲ Reset</button>
         </div>
-        <div id="ajusteInfo">Ajuste manual: X: 0 | Y: 0 | Zoom: 1.0</div>
+        <div id="ajusteInfo">Ajuste: X: 0 | Y: 0 | Zoom: 1.00</div>
         
         <div class="row-buttons">
             <button class="btn-provas" id="btnGerenciarProvas">📚 Provas</button>
@@ -332,15 +339,15 @@
         <button class="btn-sair" id="btnSair">🚪 Sair</button>
         
         <div class="slider-container">
-            <label>🔧 Limiar de detecção (para quadrados pretos):</label>
+            <label>🔧 Limiar de detecção (quadrados pretos):</label>
             <input type="range" id="limiarSlider" min="20" max="150" value="60">
             <span id="limiarValue" style="color:white;">60</span>
             <label style="display:block; margin-top:5px;">📊 Sensibilidade das respostas:</label>
             <input type="range" id="sensibilidadeSlider" min="0.08" max="0.40" step="0.01" value="0.15">
             <span id="sensibilidadeValue" style="color:white;">0.15</span>
-            <label style="display:block; margin-top:5px;">🔍 Zoom da grade:</label>
-            <input type="range" id="zoomSlider" min="0.7" max="1.3" step="0.01" value="1.0">
-            <span id="zoomValue" style="color:white;">1.00</span>
+            <label style="display:block; margin-top:5px;">📐 Margem interna (0 = sem margem):</label>
+            <input type="range" id="margemSlider" min="0" max="0.10" step="0.002" value="0.02">
+            <span id="margemValue" style="color:white;">2%</span>
         </div>
         
         <div class="resultado-preview" id="resultadoPreview" style="display: none;">
@@ -416,11 +423,12 @@
         let NUM_QUESTOES = 40;
         let gabarito = [];
         
-        // Ajustes manuais
+        // Ajustes
         let ajusteX = 0;
         let ajusteY = 0;
         let zoomGrade = 1.0;
-        const PASSO_AJUSTE = 0.005;
+        let margemInterna = 0.02;
+        const PASSO_AJUSTE = 0.003;
         
         const usuarioId = localStorage.getItem('usuario_id');
         const usuarioNome = localStorage.getItem('usuario_nome');
@@ -440,8 +448,8 @@
         const limiarValue = document.getElementById('limiarValue');
         const sensibilidadeSlider = document.getElementById('sensibilidadeSlider');
         const sensibilidadeValue = document.getElementById('sensibilidadeValue');
-        const zoomSlider = document.getElementById('zoomSlider');
-        const zoomValue = document.getElementById('zoomValue');
+        const margemSlider = document.getElementById('margemSlider');
+        const margemValue = document.getElementById('margemValue');
         const deteccaoInfo = document.getElementById('deteccaoInfo');
         
         let stream = null;
@@ -449,9 +457,6 @@
         let sensibilidadeCirculo = 0.15;
         let leituraAtiva = false;
         let frameInterval = null;
-        
-        // Últimos pontos detectados para debug
-        let ultimosQuadrados = null;
         
         limiarSlider.addEventListener('input', (e) => {
             limiarDetecao = parseInt(e.target.value);
@@ -463,12 +468,12 @@
             sensibilidadeValue.textContent = sensibilidadeCirculo;
         });
         
-        zoomSlider.addEventListener('input', (e) => {
-            zoomGrade = parseFloat(e.target.value);
-            zoomValue.textContent = zoomGrade.toFixed(2);
+        margemSlider.addEventListener('input', (e) => {
+            margemInterna = parseFloat(e.target.value);
+            margemValue.textContent = `${Math.round(margemInterna * 100)}%`;
         });
         
-        // Controles de ajuste fino
+        // Controles de ajuste
         document.getElementById('btnMoverCima').addEventListener('click', () => {
             ajusteY -= PASSO_AJUSTE;
             atualizarAjusteInfo();
@@ -485,18 +490,27 @@
             ajusteX += PASSO_AJUSTE;
             atualizarAjusteInfo();
         });
+        document.getElementById('btnZoomMais').addEventListener('click', () => {
+            zoomGrade = Math.min(zoomGrade + 0.03, 1.4);
+            atualizarAjusteInfo();
+        });
+        document.getElementById('btnZoomMenos').addEventListener('click', () => {
+            zoomGrade = Math.max(zoomGrade - 0.03, 0.7);
+            atualizarAjusteInfo();
+        });
         document.getElementById('btnResetAjuste').addEventListener('click', () => {
             ajusteX = 0;
             ajusteY = 0;
             zoomGrade = 1.0;
-            zoomSlider.value = 1.0;
-            zoomValue.textContent = '1.00';
+            margemInterna = 0.02;
+            margemSlider.value = 0.02;
+            margemValue.textContent = '2%';
             atualizarAjusteInfo();
         });
         
         function atualizarAjusteInfo() {
             document.getElementById('ajusteInfo').textContent = 
-                `Ajuste manual: X: ${(ajusteX * 100).toFixed(1)}% | Y: ${(ajusteY * 100).toFixed(1)}% | Zoom: ${zoomGrade.toFixed(2)}`;
+                `Ajuste: X: ${(ajusteX * 100).toFixed(1)}% | Y: ${(ajusteY * 100).toFixed(1)}% | Zoom: ${zoomGrade.toFixed(2)}`;
         }
         
         // ========== FUNÇÕES SUPABASE ==========
@@ -670,12 +684,12 @@
             }
         }
         
-        // ========== DETECÇÃO DE QUADRADOS MELHORADA ==========
-        function detectarQuadradosMelhorado(imageData, width, height) {
+        // ========== DETECÇÃO DE QUADRADOS ==========
+        function detectarQuadrados(imageData, width, height) {
             const dados = new Uint8ClampedArray(imageData.data);
             const limiar = limiarDetecao;
             
-            // Encontra todos os pixels escuros
+            // Encontra pixels escuros
             const pontosEscuros = [];
             const step = 3;
             
@@ -691,7 +705,7 @@
             
             if (pontosEscuros.length < 10) return null;
             
-            // Agrupa por proximidade para encontrar centros
+            // Agrupa por proximidade
             const raioAgrupamento = Math.min(width, height) * 0.02;
             const grupos = [];
             
@@ -713,10 +727,8 @@
                 }
             }
             
-            // Filtra grupos com tamanho mínimo
             const gruposFiltrados = grupos.filter(g => g.count > 8);
             
-            // Para cada grupo, verifica se é um quadrado
             const quadrados = [];
             const tamanhoMin = Math.min(width, height) * 0.015;
             const tamanhoMax = Math.min(width, height) * 0.07;
@@ -725,11 +737,9 @@
                 const cx = Math.round(g.cx);
                 const cy = Math.round(g.cy);
                 
-                // Mede a largura do objeto escuro
                 let esquerda = cx, direita = cx;
                 let topo = cy, baixo = cy;
                 
-                // Expandir para esquerda
                 for (let x = cx - 1; x >= 0; x--) {
                     const idx = (cy * width + x) * 4;
                     const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
@@ -737,7 +747,6 @@
                     else break;
                 }
                 
-                // Expandir para direita
                 for (let x = cx + 1; x < width; x++) {
                     const idx = (cy * width + x) * 4;
                     const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
@@ -745,7 +754,6 @@
                     else break;
                 }
                 
-                // Expandir para cima
                 for (let y = cy - 1; y >= 0; y--) {
                     const idx = (y * width + cx) * 4;
                     const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
@@ -753,7 +761,6 @@
                     else break;
                 }
                 
-                // Expandir para baixo
                 for (let y = cy + 1; y < height; y++) {
                     const idx = (y * width + cx) * 4;
                     const brilho = (dados[idx] + dados[idx+1] + dados[idx+2]) / 3;
@@ -764,7 +771,6 @@
                 const largura = direita - esquerda + 1;
                 const altura = baixo - topo + 1;
                 
-                // Verifica se é um quadrado
                 if (largura > tamanhoMin && largura < tamanhoMax &&
                     altura > tamanhoMin && altura < tamanhoMax) {
                     const proporcao = Math.min(largura, altura) / Math.max(largura, altura);
@@ -785,38 +791,25 @@
             
             if (quadrados.length < 4) return null;
             
-            // Organiza em 4 cantos
-            // Ordena por Y para separar superior/inferior
             quadrados.sort((a, b) => a.y - b.y);
-            
             const metade = Math.floor(quadrados.length / 2);
             const superiores = quadrados.slice(0, metade);
             const inferiores = quadrados.slice(metade);
             
-            // Ordena cada grupo por X
             superiores.sort((a, b) => a.x - b.x);
             inferiores.sort((a, b) => a.x - b.x);
             
             if (superiores.length < 2 || inferiores.length < 2) return null;
             
-            // Pega os dois mais extremos de cada grupo
-            const resultado = {
+            return {
                 superiorEsquerdo: superiores[0],
                 superiorDireito: superiores[superiores.length - 1],
                 inferiorEsquerdo: inferiores[0],
                 inferiorDireito: inferiores[inferiores.length - 1]
             };
-            
-            // Verifica se os quadrados estão nos cantos
-            const larguraTotal = resultado.superiorDireito.x - resultado.superiorEsquerdo.x;
-            const alturaTotal = resultado.inferiorEsquerdo.y - resultado.superiorEsquerdo.y;
-            
-            if (larguraTotal < width * 0.3 || alturaTotal < height * 0.3) return null;
-            
-            return resultado;
         }
         
-        // ========== CÂMERA E DETECÇÃO ==========
+        // ========== CÂMERA ==========
         async function iniciarCamera() {
             if (stream) stream.getTracks().forEach(track => track.stop());
             statusAlinhamento.innerHTML = '📷 Solicitando câmera...';
@@ -827,7 +820,7 @@
                 });
                 video.srcObject = stream;
                 await new Promise(resolve => { video.onloadedmetadata = () => { video.play(); resolve(); }; });
-                statusAlinhamento.innerHTML = '🟡 Posicione a folha para detectar os quadrados';
+                statusAlinhamento.innerHTML = '🟡 Posicione a folha';
                 document.getElementById('btnCorrigirAuto').disabled = false;
             } catch (err) {
                 try {
@@ -888,17 +881,14 @@
             overlayCtx.clearRect(0, 0, targetWidth, targetHeight);
             overlayCtx.globalAlpha = 0.85;
             
-            // Tenta detectar os quadrados
-            const quadrados = detectarQuadradosMelhorado(imageData, targetWidth, targetHeight);
+            const quadrados = detectarQuadrados(imageData, targetWidth, targetHeight);
             
             if (quadrados) {
-                ultimosQuadrados = quadrados;
                 const { superiorEsquerdo, superiorDireito, inferiorEsquerdo, inferiorDireito } = quadrados;
                 
-                // Desenha os quadrados detectados em AZUL
+                // Desenha os quadrados detectados
                 const quadradosArray = [superiorEsquerdo, superiorDireito, inferiorEsquerdo, inferiorDireito];
                 for (const q of quadradosArray) {
-                    // Retângulo
                     overlayCtx.strokeStyle = '#00ccff';
                     overlayCtx.lineWidth = 3;
                     overlayCtx.strokeRect(
@@ -907,55 +897,46 @@
                         q.direita - q.esquerda, 
                         q.baixo - q.topo
                     );
-                    // Centro
                     overlayCtx.fillStyle = '#00ccff';
                     overlayCtx.beginPath();
                     overlayCtx.arc(q.x, q.y, 5, 0, 2 * Math.PI);
                     overlayCtx.fill();
-                    // Label
-                    overlayCtx.fillStyle = '#00ccff';
-                    overlayCtx.font = '12px Arial';
-                    overlayCtx.textAlign = 'left';
-                    overlayCtx.textBaseline = 'bottom';
-                    const labels = ['SE', 'SD', 'IE', 'ID'];
-                    overlayCtx.fillText(labels[quadradosArray.indexOf(q)], q.esquerda, q.topo - 2);
                 }
                 
-                // Calcula a área da grade baseada nos quadrados
-                const margemEsquerda = 0.06;
-                const margemDireita = 0.06;
-                const margemSuperior = 0.10;
-                const margemInferior = 0.06;
+                // ===== ÁREA DA GRADE - USANDO OS QUADRADOS COMO REFERÊNCIA =====
+                // Pega a borda EXTERNA dos quadrados
+                const topY = Math.min(superiorEsquerdo.topo, superiorDireito.topo);
+                const bottomY = Math.max(inferiorEsquerdo.baixo, inferiorDireito.baixo);
+                const leftX = Math.min(superiorEsquerdo.esquerda, inferiorEsquerdo.esquerda);
+                const rightX = Math.max(superiorDireito.direita, inferiorDireito.direita);
                 
-                const topY = superiorEsquerdo.topo + (superiorEsquerdo.altura * 0.5);
-                const bottomY = inferiorEsquerdo.baixo - (inferiorEsquerdo.altura * 0.5);
-                const leftX = superiorEsquerdo.esquerda + (superiorEsquerdo.largura * 0.5);
-                const rightX = superiorDireito.direita - (superiorDireito.largura * 0.5);
+                // Aplica margem interna para compensar o tamanho dos quadrados
+                const margem = margemInterna;
+                const larguraTotal = rightX - leftX;
+                const alturaTotal = bottomY - topY;
                 
-                const alturaGrade = bottomY - topY;
-                const larguraGrade = rightX - leftX;
-                
-                // Aplica zoom
+                // Aplica zoom e ajustes
                 const zoom = zoomGrade;
-                const centroX = (leftX + rightX) / 2;
-                const centroY = (topY + bottomY) / 2;
-                const larguraZoom = larguraGrade * zoom;
-                const alturaZoom = alturaGrade * zoom;
+                const centroX = (leftX + rightX) / 2 + (ajusteX * targetWidth);
+                const centroY = (topY + bottomY) / 2 + (ajusteY * targetHeight);
+                const larguraZoom = larguraTotal * zoom;
+                const alturaZoom = alturaTotal * zoom;
                 
-                const areaTopo = centroY - (alturaZoom / 2) + (alturaZoom * margemSuperior) + (ajusteY * targetHeight);
-                const areaBaixo = centroY + (alturaZoom / 2) - (alturaZoom * margemInferior) + (ajusteY * targetHeight);
-                const areaEsquerda = centroX - (larguraZoom / 2) + (larguraZoom * margemEsquerda) + (ajusteX * targetWidth);
-                const areaDireita = centroX + (larguraZoom / 2) - (larguraZoom * margemDireita) + (ajusteX * targetWidth);
+                // Área da grade - usa OS QUADRADOS como borda
+                const areaEsquerda = centroX - (larguraZoom / 2) + (larguraZoom * margem);
+                const areaDireita = centroX + (larguraZoom / 2) - (larguraZoom * margem);
+                const areaTopo = centroY - (alturaZoom / 2) + (alturaZoom * margem);
+                const areaBaixo = centroY + (alturaZoom / 2) - (alturaZoom * margem);
                 
-                deteccaoInfo.textContent = `✅ Quadrados detectados! SE(${Math.round(superiorEsquerdo.x)},${Math.round(superiorEsquerdo.y)}) SD(${Math.round(superiorDireito.x)},${Math.round(superiorDireito.y)})`;
+                deteccaoInfo.textContent = `✅ Quadrados detectados! Grade: ${Math.round(areaDireita - areaEsquerda)}x${Math.round(areaBaixo - areaTopo)}px`;
                 statusAlinhamento.className = 'status-alinhamento detected';
-                statusAlinhamento.innerHTML = '🔵 Grade alinhada! Use ajuste fino se necessário.';
+                statusAlinhamento.innerHTML = '🔵 Grade ajustada! Use controles para refinar.';
                 
                 // DESENHA A GRADE
                 const cellWidth = (areaDireita - areaEsquerda) / COLUNAS_QUESTOES;
                 const cellHeight = (areaBaixo - areaTopo) / LINHAS_QUESTOES;
                 const opcaoWidth = cellWidth / (NUM_OPCOES + 0.7);
-                const circleRadius = Math.min(cellWidth, cellHeight) * 0.11;
+                const circleRadius = Math.min(cellWidth, cellHeight) * 0.10;
                 
                 // Área de detecção VERMELHA
                 overlayCtx.strokeStyle = '#ff0000';
@@ -989,7 +970,7 @@
                     return brilho < limiarDetecao * 1.2;
                 }
                 
-                function verificarPreenchimentoRobusto(cx, cy, raio) {
+                function verificarPreenchimento(cx, cy, raio) {
                     const raioTest = raio * 0.7;
                     let pontuacao = 0;
                     const pontos = [
@@ -1035,7 +1016,7 @@
                             const opcaoX = cellX + (opt + 0.6) * opcaoWidth;
                             const opcaoY = cellY + cellHeight / 2;
                             
-                            const preenchimento = verificarPreenchimentoRobusto(opcaoX, opcaoY, circleRadius);
+                            const preenchimento = verificarPreenchimento(opcaoX, opcaoY, circleRadius);
                             
                             overlayCtx.beginPath();
                             overlayCtx.arc(opcaoX, opcaoY, circleRadius, 0, 2 * Math.PI);
@@ -1058,16 +1039,11 @@
                                 }
                             }
                             overlayCtx.stroke();
-                            
-                            overlayCtx.font = `${Math.max(8, circleRadius)}px Arial`;
-                            overlayCtx.fillStyle = 'white';
-                            overlayCtx.textAlign = 'center';
-                            overlayCtx.textBaseline = 'middle';
-                            overlayCtx.fillText(OPCOES[opt], opcaoX, opcaoY);
                         }
                         
+                        // Número da questão (sem letras dentro dos círculos)
                         const numQuestao = questaoIndex + 1;
-                        overlayCtx.font = `bold ${Math.max(8, circleRadius + 1)}px Arial`;
+                        overlayCtx.font = `bold ${Math.max(9, circleRadius + 2)}px Arial`;
                         overlayCtx.fillStyle = '#ffff00';
                         overlayCtx.textAlign = 'left';
                         overlayCtx.textBaseline = 'top';
@@ -1076,11 +1052,11 @@
                         if (totalPreenchidas === 1 && melhorOpcao >= 0) {
                             respostas.push(OPCOES[melhorOpcao]);
                             questoesDetectadas++;
-                            overlayCtx.fillStyle = 'rgba(0,255,0,0.12)';
+                            overlayCtx.fillStyle = 'rgba(0,255,0,0.10)';
                             overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
                         } else if (totalPreenchidas > 1) {
                             respostas.push(null);
-                            overlayCtx.fillStyle = 'rgba(255,255,0,0.15)';
+                            overlayCtx.fillStyle = 'rgba(255,255,0,0.12)';
                             overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
                         } else {
                             respostas.push(null);
@@ -1125,21 +1101,19 @@
                     statusAlinhamento.innerHTML = `✅ Excelente! ${questoesDetectadas}/${NUM_QUESTOES} detectadas`;
                     statusAlinhamento.className = 'status-alinhamento good';
                 } else if (pctDetectado > 50) {
-                    statusAlinhamento.innerHTML = `🟡 ${questoesDetectadas}/${NUM_QUESTOES} - Verifique o preenchimento`;
+                    statusAlinhamento.innerHTML = `🟡 ${questoesDetectadas}/${NUM_QUESTOES} - Ajuste o zoom ou margem`;
                     statusAlinhamento.className = 'status-alinhamento warning';
                 } else {
-                    statusAlinhamento.innerHTML = `🔴 ${questoesDetectadas}/${NUM_QUESTOES} - Ajuste a iluminação ou use os controles`;
+                    statusAlinhamento.innerHTML = `🔴 ${questoesDetectadas}/${NUM_QUESTOES} - Use zoom e ajuste fino`;
                     statusAlinhamento.className = '';
                 }
                 
             } else {
-                // Não detectou os quadrados
-                deteccaoInfo.textContent = '🔴 Quadrados não detectados. Verifique: 1) Iluminação 2) Folha bem posicionada 3) Ajuste o limiar';
+                deteccaoInfo.textContent = '🔴 Quadrados não detectados. Ajuste o LIMIAR ou a iluminação.';
                 statusAlinhamento.innerHTML = '🔴 Quadrados de referência não encontrados!';
                 statusAlinhamento.className = 'status-alinhamento error';
                 
-                // Desenha instrução
-                overlayCtx.fillStyle = 'rgba(255,0,0,0.2)';
+                overlayCtx.fillStyle = 'rgba(255,0,0,0.15)';
                 overlayCtx.fillRect(0, 0, targetWidth, targetHeight);
                 overlayCtx.fillStyle = '#ff4444';
                 overlayCtx.font = '28px Arial';
