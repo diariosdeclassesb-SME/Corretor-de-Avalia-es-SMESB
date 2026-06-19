@@ -3,32 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Leitor de Gabarito - Grade Ajustada</title>
+    <title>Leitor de Gabarito - Modo Captura</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
             min-height: 100vh;
             background: #000;
-            padding: 12px;
+            padding: 8px;
+            overflow-y: auto;
         }
         .container { max-width: 500px; margin: auto; position: relative; }
         .header {
             background: linear-gradient(135deg, #1a73e8, #0d47a1);
-            padding: 12px;
-            border-radius: 16px;
+            padding: 8px 12px;
+            border-radius: 12px;
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
-        .header h1 { font-size: 1rem; color: white; }
+        .header h1 { font-size: 0.9rem; color: white; }
+        
+        .info-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+        .info-row > div {
+            flex: 1;
+            background: rgba(44, 44, 44, 0.95);
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 0.6rem;
+            text-align: center;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .info-gabarito {
+            padding: 4px 8px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.6rem;
+        }
+        .info-gabarito.carregado { background: rgba(76, 175, 80, 0.9); color: white; }
+        .info-gabarito.nao-carregado { background: rgba(255, 68, 68, 0.9); color: white; }
+        
+        .status-alinhamento {
+            background: rgba(0,0,0,0.8);
+            padding: 6px 10px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 0.7rem;
+            margin-bottom: 4px;
+            font-weight: bold;
+            color: #ffaa00;
+        }
+        .status-alinhamento.good { background: rgba(0, 100, 0, 0.9); color: #00ff00; }
+        .status-alinhamento.warning { background: rgba(100, 60, 0, 0.9); color: #ffaa00; }
+        .status-alinhamento.detected { background: rgba(0, 60, 100, 0.9); color: #00ccff; }
+        .status-alinhamento.error { background: rgba(100, 0, 0, 0.9); color: #ff4444; }
+        .status-alinhamento.capturado { background: rgba(0, 100, 80, 0.9); color: #00ffaa; }
+        
         .camera-container {
             position: relative;
             background: #000;
-            border-radius: 16px;
+            border-radius: 12px;
             overflow: hidden;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             aspect-ratio: 3 / 4;
-            border: 2px solid rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.15);
+        }
+        .camera-container.capturado {
+            border-color: #00ffaa;
+            box-shadow: 0 0 20px rgba(0, 255, 170, 0.3);
         }
         video {
             width: 100%;
@@ -44,95 +92,149 @@
             object-fit: cover;
             pointer-events: none;
         }
-        .status-alinhamento {
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
-            padding: 10px;
-            border-radius: 12px;
-            text-align: center;
-            font-size: 0.75rem;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #ffaa00;
+        
+        .controles-superiores {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
         }
-        .status-alinhamento.good { background: rgba(0, 100, 0, 0.9); color: #00ff00; }
-        .status-alinhamento.warning { background: rgba(100, 60, 0, 0.9); color: #ffaa00; }
-        .status-alinhamento.detected { background: rgba(0, 60, 100, 0.9); color: #00ccff; }
-        .status-alinhamento.error { background: rgba(100, 0, 0, 0.9); color: #ff4444; }
-        button {
-            width: 100%;
-            padding: 12px;
-            font-size: 0.85rem;
+        .controles-superiores button {
+            flex: 1;
+            min-width: 40px;
+            padding: 6px 4px;
+            font-size: 0.6rem;
             font-weight: bold;
             border: none;
-            border-radius: 25px;
-            margin: 5px 0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #333;
+            color: white;
+        }
+        .controles-superiores button:active { transform: scale(0.95); }
+        .btn-ajuste { background: #2196f3; color: white; }
+        .btn-ajuste-reset { background: #666; color: white; }
+        .btn-zoom { background: #4caf50; color: white; }
+        .btn-capturar { 
+            background: #ff6f00; 
+            color: white; 
+            font-size: 0.7rem;
+            padding: 6px 12px;
+            min-width: 80px;
+            animation: pulse 1.5s infinite;
+        }
+        .btn-capturar.capturado {
+            background: #00c853;
+            animation: none;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        
+        #ajusteInfo {
+            color: #aaa;
+            text-align: center;
+            font-size: 0.55rem;
+            padding: 2px;
+            margin-bottom: 4px;
+        }
+        
+        .row-buttons {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        .row-buttons button {
+            flex: 1;
+            padding: 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 20px;
             cursor: pointer;
             transition: all 0.2s;
         }
-        button:active { transform: scale(0.98); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .row-buttons button:active { transform: scale(0.97); }
         .btn-corrigir-auto { background: #1a73e8; color: white; }
-        .btn-gabarito { background: #3c39f5; color: white; }
+        .btn-corrigir-auto.ativo { background: #f44336; }
         .btn-provas { background: #4caf50; color: white; }
+        .btn-gabarito { background: #3c39f5; color: white; }
         .btn-sair { background: #dc3545; color: white; }
+        
+        .slider-container {
+            background: #333;
+            padding: 6px 10px;
+            border-radius: 10px;
+            margin-top: 4px;
+        }
+        .slider-container label { color: #aaa; font-size: 0.55rem; display: block; }
+        .slider-container input[type="range"] { width: 100%; margin: 2px 0; }
+        .slider-container span { color: white; font-size: 0.55rem; }
+        .slider-row {
+            display: flex;
+            gap: 10px;
+        }
+        .slider-row > div {
+            flex: 1;
+        }
+        
         .resultado-preview {
             background: rgba(30, 30, 30, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 12px;
-            margin-top: 12px;
+            border-radius: 12px;
+            padding: 8px 12px;
+            margin-top: 6px;
+        }
+        .resultado-preview.capturado {
+            border: 2px solid #00ffaa;
         }
         .acertos-tempo-real {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             color: #4caf50;
             text-align: center;
             font-weight: bold;
         }
         .nota-tempo-real {
-            font-size: 1rem;
+            font-size: 0.85rem;
             text-align: center;
             color: white;
         }
         .respostas-grid {
-            max-height: 150px;
+            max-height: 120px;
             overflow-y: auto;
             display: grid;
             grid-template-columns: repeat(10, 1fr);
             gap: 2px;
-            margin-top: 10px;
+            margin-top: 6px;
         }
         .resposta-item {
             padding: 2px;
             border-radius: 3px;
             text-align: center;
-            font-size: 0.55rem;
+            font-size: 0.5rem;
             color: white;
         }
         .resposta-certa { background: #1b5e1b; }
         .resposta-errada { background: #8b1a1a; }
         .resposta-nao-detectada { background: #555; }
-        .info-usuario, .info-prova {
-            background: rgba(44, 44, 44, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 8px;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            font-size: 0.7rem;
+        
+        #deteccaoInfo {
+            color: #00ccff;
             text-align: center;
-            color: white;
+            font-size: 0.6rem;
+            padding: 3px;
+            background: rgba(0,40,60,0.7);
+            border-radius: 8px;
+            margin-top: 3px;
+            min-height: 20px;
         }
-        .info-gabarito {
-            padding: 6px;
-            border-radius: 10px;
-            text-align: center;
-            margin-bottom: 8px;
-            font-size: 0.7rem;
+        #deteccaoInfo.capturado {
+            background: rgba(0,80,60,0.7);
+            color: #00ffaa;
         }
-        .info-gabarito.carregado { background: rgba(76, 175, 80, 0.9); color: white; }
-        .info-gabarito.nao-carregado { background: rgba(255, 68, 68, 0.9); color: white; }
-        .row-buttons { display: flex; gap: 8px; }
-        .row-buttons button { flex: 1; }
+        
         .modal {
             display: none;
             position: fixed;
@@ -207,11 +309,11 @@
             font-size: 0.7rem;
         }
         .modal-buttons { display: flex; gap: 10px; margin-top: 10px; }
-        .modal-buttons button { flex: 1; margin: 0; }
+        .modal-buttons button { flex: 1; margin: 0; padding: 12px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; }
         .btn-salvar-gabarito { background: #4caf50; color: white; }
         .btn-fechar-modal { background: #666; color: white; }
-        .btn-reset { background: #ff4444; color: white; margin-top: 10px; }
-        .btn-nova-prova { background: #4caf50; color: white; margin-bottom: 12px; }
+        .btn-reset { background: #ff4444; color: white; margin-top: 10px; padding: 12px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn-nova-prova { background: #4caf50; color: white; padding: 12px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 12px; }
         .lista-provas { max-height: 300px; overflow-y: auto; }
         .prova-item {
             background: #2c2c2c;
@@ -227,127 +329,95 @@
         .prova-nome { font-weight: bold; font-size: 0.85rem; color: white; }
         .prova-detalhes { font-size: 0.6rem; color: #aaa; }
         .prova-acoes { display: flex; gap: 8px; }
-        .btn-editar-prova { background: #2196f3; padding: 5px 8px; font-size: 0.65rem; margin: 0; width: auto; }
-        .btn-excluir-prova { background: #ff4444; padding: 5px 8px; font-size: 0.65rem; margin: 0; width: auto; }
-        .slider-container {
-            background: #333;
-            padding: 8px;
-            border-radius: 12px;
-            margin-top: 10px;
-        }
-        .slider-container label { color: white; font-size: 0.65rem; }
-        input[type="range"] { width: 100%; margin: 5px 0; }
-        .btn-corrigir-auto.ativo { background: #f44336; }
+        .btn-editar-prova { background: #2196f3; padding: 5px 8px; font-size: 0.65rem; margin: 0; width: auto; border: none; border-radius: 8px; color: white; cursor: pointer; }
+        .btn-excluir-prova { background: #ff4444; padding: 5px 8px; font-size: 0.65rem; margin: 0; width: auto; border: none; border-radius: 8px; color: white; cursor: pointer; }
+        
         .instrucao {
             background: rgba(0,0,0,0.6);
-            padding: 5px;
+            padding: 4px 8px;
             border-radius: 8px;
-            font-size: 0.6rem;
+            font-size: 0.55rem;
             text-align: center;
             color: #ffaa00;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
-        #deteccaoInfo {
-            color: #00ccff;
-            text-align: center;
-            font-size: 0.65rem;
-            padding: 4px;
-            background: rgba(0,40,60,0.7);
-            border-radius: 8px;
-            margin-top: 4px;
-            min-height: 24px;
-        }
-        .ajuste-container {
-            display: flex;
-            gap: 8px;
-            margin: 5px 0;
-            flex-wrap: wrap;
-        }
-        .ajuste-container button {
-            flex: 1;
-            min-width: 60px;
-            padding: 8px;
-            font-size: 0.7rem;
-            margin: 2px;
-            border-radius: 12px;
-        }
-        .btn-ajuste { background: #2196f3; color: white; }
-        .btn-ajuste-reset { background: #666; color: white; }
-        #ajusteInfo {
-            color: #aaa;
-            text-align: center;
-            font-size: 0.65rem;
-            padding: 4px;
-        }
-        .toggle-label {
+        
+        /* Badge de captura */
+        .badge-captura {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #00c853;
             color: white;
-            font-size: 0.65rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 5px 0;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            z-index: 10;
         }
-        .toggle-label input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
+        .badge-captura.visible {
+            display: block;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📸 Leitor de Gabarito - Grade Ajustada</h1>
+            <h1>📸 Leitor de Gabarito - Modo Captura</h1>
         </div>
         
-        <div class="info-usuario" id="infoUsuario">Carregando...</div>
-        <div class="info-prova" id="infoProva">📋 Nenhuma prova selecionada</div>
-        <div class="info-gabarito nao-carregado" id="infoGabarito">⚠️ Selecione ou crie uma prova</div>
-        
-        <div class="status-alinhamento" id="statusAlinhamento">
-            🟡 Aguardando câmera...
+        <div class="info-row">
+            <div id="infoUsuario">Carregando...</div>
+            <div id="infoProva">📋 Nenhuma prova</div>
+            <div class="info-gabarito nao-carregado" id="infoGabarito">⚠️</div>
         </div>
         
-        <div class="instrucao" id="instrucao">
-            💡 Posicione a folha. Os quadrados pretos serão destacados em AZUL.
-        </div>
+        <div class="status-alinhamento" id="statusAlinhamento">🟡 Aguardando câmera...</div>
         
-        <div class="camera-container">
+        <div class="camera-container" id="cameraContainer">
             <video id="video" autoplay playsinline muted></video>
             <canvas id="overlayCanvas"></canvas>
+            <div class="badge-captura" id="badgeCaptura">✅ CAPTURADO</div>
         </div>
         
-        <div id="deteccaoInfo">🔍 Aguardando detecção dos quadrados...</div>
+        <div id="deteccaoInfo">🔍 Posicione a folha, ajuste e clique em CAPTURAR</div>
         
-        <div class="ajuste-container">
+        <!-- CONTROLES - Agora com botão CAPTURAR -->
+        <div class="controles-superiores">
             <button class="btn-ajuste" id="btnMoverCima">⬆</button>
             <button class="btn-ajuste" id="btnMoverBaixo">⬇</button>
             <button class="btn-ajuste" id="btnMoverEsquerda">⬅</button>
             <button class="btn-ajuste" id="btnMoverDireita">➡</button>
-            <button class="btn-ajuste" id="btnZoomMais">🔍+</button>
-            <button class="btn-ajuste" id="btnZoomMenos">🔍-</button>
-            <button class="btn-ajuste-reset" id="btnResetAjuste">⟲ Reset</button>
+            <button class="btn-zoom" id="btnZoomMais">🔍+</button>
+            <button class="btn-zoom" id="btnZoomMenos">🔍-</button>
+            <button class="btn-capturar" id="btnCapturar">📸 CAPTURAR</button>
+            <button class="btn-ajuste-reset" id="btnResetAjuste">⟲</button>
         </div>
-        <div id="ajusteInfo">Ajuste: X: 0 | Y: 0 | Zoom: 1.00</div>
+        <div id="ajusteInfo">Ajuste: X:0 | Y:0 | Zoom:1.00 | Margem:2%</div>
         
         <div class="row-buttons">
-            <button class="btn-provas" id="btnGerenciarProvas">📚 Provas</button>
-            <button class="btn-corrigir-auto" id="btnCorrigirAuto">🎯 Iniciar Leitura</button>
+            <button class="btn-corrigir-auto" id="btnCorrigirAuto">🎯 Prévia</button>
+            <button class="btn-provas" id="btnGerenciarProvas">📚</button>
+            <button class="btn-gabarito" id="btnAbrirGabarito" disabled>📝</button>
+            <button class="btn-sair" id="btnSair">🚪</button>
         </div>
         
-        <button class="btn-gabarito" id="btnAbrirGabarito" disabled>📝 Editar Gabarito</button>
-        <button class="btn-sair" id="btnSair">🚪 Sair</button>
-        
         <div class="slider-container">
-            <label>🔧 Limiar de detecção (quadrados pretos):</label>
-            <input type="range" id="limiarSlider" min="20" max="150" value="60">
-            <span id="limiarValue" style="color:white;">60</span>
-            <label style="display:block; margin-top:5px;">📊 Sensibilidade das respostas:</label>
-            <input type="range" id="sensibilidadeSlider" min="0.08" max="0.40" step="0.01" value="0.15">
-            <span id="sensibilidadeValue" style="color:white;">0.15</span>
-            <label style="display:block; margin-top:5px;">📐 Margem interna (0 = sem margem):</label>
-            <input type="range" id="margemSlider" min="0" max="0.10" step="0.002" value="0.02">
-            <span id="margemValue" style="color:white;">2%</span>
+            <div class="slider-row">
+                <div>
+                    <label>🔧 Limiar: <span id="limiarValue">60</span></label>
+                    <input type="range" id="limiarSlider" min="20" max="150" value="60">
+                </div>
+                <div>
+                    <label>📊 Sensib.: <span id="sensibilidadeValue">0.15</span></label>
+                    <input type="range" id="sensibilidadeSlider" min="0.08" max="0.40" step="0.01" value="0.15">
+                </div>
+                <div>
+                    <label>📐 Margem: <span id="margemValue">2%</span></label>
+                    <input type="range" id="margemSlider" min="0" max="0.10" step="0.002" value="0.02">
+                </div>
+            </div>
         </div>
         
         <div class="resultado-preview" id="resultadoPreview" style="display: none;">
@@ -412,7 +482,6 @@
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Layout: 2 colunas × 20 linhas = 40 questões
         const LINHAS_QUESTOES = 20;
         const COLUNAS_QUESTOES = 2;
         const NUM_OPCOES = 4;
@@ -423,12 +492,17 @@
         let NUM_QUESTOES = 40;
         let gabarito = [];
         
-        // Ajustes
         let ajusteX = 0;
         let ajusteY = 0;
         let zoomGrade = 1.0;
         let margemInterna = 0.02;
         const PASSO_AJUSTE = 0.003;
+        
+        // Estado de captura
+        let capturado = false;
+        let frameCapturado = null;
+        let resultadoCapturado = null;
+        let ultimaDeteccao = null;
         
         const usuarioId = localStorage.getItem('usuario_id');
         const usuarioNome = localStorage.getItem('usuario_nome');
@@ -443,6 +517,8 @@
         // Elementos
         const video = document.getElementById('video');
         const overlayCanvas = document.getElementById('overlayCanvas');
+        const cameraContainer = document.getElementById('cameraContainer');
+        const badgeCaptura = document.getElementById('badgeCaptura');
         const statusAlinhamento = document.getElementById('statusAlinhamento');
         const limiarSlider = document.getElementById('limiarSlider');
         const limiarValue = document.getElementById('limiarValue');
@@ -451,6 +527,7 @@
         const margemSlider = document.getElementById('margemSlider');
         const margemValue = document.getElementById('margemValue');
         const deteccaoInfo = document.getElementById('deteccaoInfo');
+        const resultadoPreview = document.getElementById('resultadoPreview');
         
         let stream = null;
         let limiarDetecao = 60;
@@ -465,38 +542,45 @@
         
         sensibilidadeSlider.addEventListener('input', (e) => {
             sensibilidadeCirculo = parseFloat(e.target.value);
-            sensibilidadeValue.textContent = sensibilidadeCirculo;
+            sensibilidadeValue.textContent = sensibilidadeCirculo.toFixed(2);
         });
         
         margemSlider.addEventListener('input', (e) => {
             margemInterna = parseFloat(e.target.value);
             margemValue.textContent = `${Math.round(margemInterna * 100)}%`;
+            atualizarAjusteInfo();
         });
         
-        // Controles de ajuste
+        // Controles
         document.getElementById('btnMoverCima').addEventListener('click', () => {
             ajusteY -= PASSO_AJUSTE;
             atualizarAjusteInfo();
+            resetarCaptura();
         });
         document.getElementById('btnMoverBaixo').addEventListener('click', () => {
             ajusteY += PASSO_AJUSTE;
             atualizarAjusteInfo();
+            resetarCaptura();
         });
         document.getElementById('btnMoverEsquerda').addEventListener('click', () => {
             ajusteX -= PASSO_AJUSTE;
             atualizarAjusteInfo();
+            resetarCaptura();
         });
         document.getElementById('btnMoverDireita').addEventListener('click', () => {
             ajusteX += PASSO_AJUSTE;
             atualizarAjusteInfo();
+            resetarCaptura();
         });
         document.getElementById('btnZoomMais').addEventListener('click', () => {
             zoomGrade = Math.min(zoomGrade + 0.03, 1.4);
             atualizarAjusteInfo();
+            resetarCaptura();
         });
         document.getElementById('btnZoomMenos').addEventListener('click', () => {
             zoomGrade = Math.max(zoomGrade - 0.03, 0.7);
             atualizarAjusteInfo();
+            resetarCaptura();
         });
         document.getElementById('btnResetAjuste').addEventListener('click', () => {
             ajusteX = 0;
@@ -506,11 +590,83 @@
             margemSlider.value = 0.02;
             margemValue.textContent = '2%';
             atualizarAjusteInfo();
+            resetarCaptura();
         });
         
         function atualizarAjusteInfo() {
             document.getElementById('ajusteInfo').textContent = 
-                `Ajuste: X: ${(ajusteX * 100).toFixed(1)}% | Y: ${(ajusteY * 100).toFixed(1)}% | Zoom: ${zoomGrade.toFixed(2)}`;
+                `Ajuste: X:${(ajusteX * 100).toFixed(1)}% | Y:${(ajusteY * 100).toFixed(1)}% | Zoom:${zoomGrade.toFixed(2)} | Margem:${Math.round(margemInterna * 100)}%`;
+        }
+        
+        function resetarCaptura() {
+            capturado = false;
+            frameCapturado = null;
+            resultadoCapturado = null;
+            cameraContainer.classList.remove('capturado');
+            badgeCaptura.classList.remove('visible');
+            document.getElementById('btnCapturar').textContent = '📸 CAPTURAR';
+            document.getElementById('btnCapturar').classList.remove('capturado');
+            resultadoPreview.classList.remove('capturado');
+            deteccaoInfo.classList.remove('capturado');
+            document.getElementById('deteccaoInfo').textContent = '🔍 Ajuste a posição e clique em CAPTURAR';
+            statusAlinhamento.classList.remove('capturado');
+        }
+        
+        // ========== BOTÃO CAPTURAR ==========
+        document.getElementById('btnCapturar').addEventListener('click', () => {
+            if (!provaAtual) {
+                alert('⚠️ Selecione uma prova primeiro!');
+                return;
+            }
+            
+            if (capturado) {
+                // Se já capturado, permite recapturar
+                resetarCaptura();
+                return;
+            }
+            
+            // Captura o frame atual
+            if (ultimaDeteccao && ultimaDeteccao.quadrados) {
+                capturado = true;
+                frameCapturado = ultimaDeteccao;
+                resultadoCapturado = ultimaDeteccao.resultado;
+                
+                // Atualiza UI
+                cameraContainer.classList.add('capturado');
+                badgeCaptura.classList.add('visible');
+                document.getElementById('btnCapturar').textContent = '🔄 RECAPTURAR';
+                document.getElementById('btnCapturar').classList.add('capturado');
+                resultadoPreview.classList.add('capturado');
+                deteccaoInfo.classList.add('capturado');
+                deteccaoInfo.textContent = '✅ CAPTURADO! Resultados abaixo.';
+                statusAlinhamento.classList.add('capturado');
+                statusAlinhamento.innerHTML = '✅ CAPTURADO! Resultados finais abaixo.';
+                
+                // Mostra resultados capturados
+                exibirResultadoCapturado(resultadoCapturado);
+                
+                // Para a prévia
+                pararLeitura();
+            } else {
+                alert('⚠️ Aguarde a detecção dos quadrados pretos antes de capturar.');
+            }
+        });
+        
+        function exibirResultadoCapturado(resultado) {
+            if (!resultado) return;
+            
+            const { acertos, total, nota, detalhes, questoesDetectadas } = resultado;
+            
+            resultadoPreview.style.display = 'block';
+            document.getElementById('acertosTempoReal').innerHTML = `✅ ${acertos} / ${total}`;
+            document.getElementById('notaTempoReal').innerHTML = `🎓 NOTA: ${nota.toFixed(1)}`;
+            
+            const grid = document.getElementById('respostasGrid');
+            grid.innerHTML = detalhes.map(d => `
+                <div class="resposta-item ${d.aluno === '⚪' ? 'resposta-nao-detectada' : (d.certo ? 'resposta-certa' : 'resposta-errada')}">
+                    ${d.num}<br>${d.aluno}
+                </div>
+            `).join('');
         }
         
         // ========== FUNÇÕES SUPABASE ==========
@@ -568,11 +724,13 @@
                 NUM_QUESTOES = data.num_questoes;
                 gabarito = [...data.gabarito];
                 
-                document.getElementById('infoProva').innerHTML = `📋 ${provaAtual.nome_prova} (${NUM_QUESTOES}q)`;
-                document.getElementById('infoGabarito').innerHTML = `✅ Gabarito carregado!`;
+                document.getElementById('infoProva').innerHTML = `📋 ${provaAtual.nome_prova}`;
+                document.getElementById('infoGabarito').innerHTML = `✅ Gabarito`;
                 document.getElementById('infoGabarito').className = 'info-gabarito carregado';
                 document.getElementById('btnAbrirGabarito').disabled = false;
                 document.getElementById('modalProvas').style.display = 'none';
+                
+                resetarCaptura();
             } catch (err) {
                 console.error(err);
             }
@@ -689,7 +847,6 @@
             const dados = new Uint8ClampedArray(imageData.data);
             const limiar = limiarDetecao;
             
-            // Encontra pixels escuros
             const pontosEscuros = [];
             const step = 3;
             
@@ -705,7 +862,6 @@
             
             if (pontosEscuros.length < 10) return null;
             
-            // Agrupa por proximidade
             const raioAgrupamento = Math.min(width, height) * 0.02;
             const grupos = [];
             
@@ -820,7 +976,7 @@
                 });
                 video.srcObject = stream;
                 await new Promise(resolve => { video.onloadedmetadata = () => { video.play(); resolve(); }; });
-                statusAlinhamento.innerHTML = '🟡 Posicione a folha';
+                statusAlinhamento.innerHTML = '🟡 Posicione a folha e ajuste';
                 document.getElementById('btnCorrigirAuto').disabled = false;
             } catch (err) {
                 try {
@@ -835,9 +991,17 @@
         }
         
         function iniciarLeitura() {
+            if (capturado) {
+                // Se já capturado, mostra a captura
+                if (resultadoCapturado) {
+                    exibirResultadoCapturado(resultadoCapturado);
+                }
+                return;
+            }
+            
             if (frameInterval) clearInterval(frameInterval);
             leituraAtiva = true;
-            document.getElementById('btnCorrigirAuto').innerHTML = '⏹️ Parar Leitura';
+            document.getElementById('btnCorrigirAuto').innerHTML = '⏹️ Parar';
             document.getElementById('btnCorrigirAuto').classList.add('ativo');
             frameInterval = setInterval(() => {
                 if (leituraAtiva && video.videoWidth > 0 && provaAtual) processarFrame();
@@ -847,10 +1011,12 @@
         function pararLeitura() {
             if (frameInterval) clearInterval(frameInterval);
             leituraAtiva = false;
-            document.getElementById('btnCorrigirAuto').innerHTML = '🎯 Iniciar Leitura';
+            document.getElementById('btnCorrigirAuto').innerHTML = '🎯 Prévia';
             document.getElementById('btnCorrigirAuto').classList.remove('ativo');
-            const ctx = overlayCanvas.getContext('2d');
-            if (ctx) ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            if (!capturado) {
+                const ctx = overlayCanvas.getContext('2d');
+                if (ctx) ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            }
         }
         
         function processarFrame() {
@@ -886,7 +1052,6 @@
             if (quadrados) {
                 const { superiorEsquerdo, superiorDireito, inferiorEsquerdo, inferiorDireito } = quadrados;
                 
-                // Desenha os quadrados detectados
                 const quadradosArray = [superiorEsquerdo, superiorDireito, inferiorEsquerdo, inferiorDireito];
                 for (const q of quadradosArray) {
                     overlayCtx.strokeStyle = '#00ccff';
@@ -903,47 +1068,41 @@
                     overlayCtx.fill();
                 }
                 
-                // ===== ÁREA DA GRADE - USANDO OS QUADRADOS COMO REFERÊNCIA =====
-                // Pega a borda EXTERNA dos quadrados
+                // Área da grade
                 const topY = Math.min(superiorEsquerdo.topo, superiorDireito.topo);
                 const bottomY = Math.max(inferiorEsquerdo.baixo, inferiorDireito.baixo);
                 const leftX = Math.min(superiorEsquerdo.esquerda, inferiorEsquerdo.esquerda);
                 const rightX = Math.max(superiorDireito.direita, inferiorDireito.direita);
                 
-                // Aplica margem interna para compensar o tamanho dos quadrados
                 const margem = margemInterna;
                 const larguraTotal = rightX - leftX;
                 const alturaTotal = bottomY - topY;
                 
-                // Aplica zoom e ajustes
                 const zoom = zoomGrade;
                 const centroX = (leftX + rightX) / 2 + (ajusteX * targetWidth);
                 const centroY = (topY + bottomY) / 2 + (ajusteY * targetHeight);
                 const larguraZoom = larguraTotal * zoom;
                 const alturaZoom = alturaTotal * zoom;
                 
-                // Área da grade - usa OS QUADRADOS como borda
                 const areaEsquerda = centroX - (larguraZoom / 2) + (larguraZoom * margem);
                 const areaDireita = centroX + (larguraZoom / 2) - (larguraZoom * margem);
                 const areaTopo = centroY - (alturaZoom / 2) + (alturaZoom * margem);
                 const areaBaixo = centroY + (alturaZoom / 2) - (alturaZoom * margem);
                 
-                deteccaoInfo.textContent = `✅ Quadrados detectados! Grade: ${Math.round(areaDireita - areaEsquerda)}x${Math.round(areaBaixo - areaTopo)}px`;
+                deteccaoInfo.textContent = `✅ Quadrados detectados! Clique em CAPTURAR para fixar o resultado.`;
                 statusAlinhamento.className = 'status-alinhamento detected';
-                statusAlinhamento.innerHTML = '🔵 Grade ajustada! Use controles para refinar.';
+                statusAlinhamento.innerHTML = '🔵 Pronto para capturar!';
                 
-                // DESENHA A GRADE
                 const cellWidth = (areaDireita - areaEsquerda) / COLUNAS_QUESTOES;
                 const cellHeight = (areaBaixo - areaTopo) / LINHAS_QUESTOES;
                 const opcaoWidth = cellWidth / (NUM_OPCOES + 0.7);
                 const circleRadius = Math.min(cellWidth, cellHeight) * 0.10;
                 
-                // Área de detecção VERMELHA
+                // Grade VERMELHA
                 overlayCtx.strokeStyle = '#ff0000';
                 overlayCtx.lineWidth = 3;
                 overlayCtx.strokeRect(areaEsquerda, areaTopo, areaDireita - areaEsquerda, areaBaixo - areaTopo);
                 
-                // Grade
                 overlayCtx.strokeStyle = '#ff6666';
                 overlayCtx.lineWidth = 1;
                 const xMeio = areaEsquerda + cellWidth;
@@ -967,34 +1126,51 @@
                     if (x < 0 || x >= targetWidth || y < 0 || y >= targetHeight) return false;
                     const idx = (Math.floor(y) * targetWidth + Math.floor(x)) * 4;
                     const brilho = (dados[idx] * 0.299 + dados[idx+1] * 0.587 + dados[idx+2] * 0.114);
-                    return brilho < limiarDetecao * 1.2;
+                    return brilho < limiarDetecao;
                 }
                 
-                function verificarPreenchimento(cx, cy, raio) {
-                    const raioTest = raio * 0.7;
-                    let pontuacao = 0;
-                    const pontos = [
-                        [0, 0, 1.0],
-                        [-raioTest * 0.6, -raioTest * 0.6, 0.6],
-                        [raioTest * 0.6, -raioTest * 0.6, 0.6],
-                        [-raioTest * 0.6, raioTest * 0.6, 0.6],
-                        [raioTest * 0.6, raioTest * 0.6, 0.6],
-                        [0, -raioTest * 0.9, 0.4],
-                        [0, raioTest * 0.9, 0.4]
-                    ];
+                function verificarPreenchimentoMelhorado(cx, cy, raio) {
+                    const raioTest = raio * 0.8;
+                    let totalPontos = 0;
+                    let pontosEscuros = 0;
                     
-                    for (const [dx, dy, peso] of pontos) {
-                        const px = cx + dx;
-                        const py = cy + dy;
-                        if (px >= 0 && px < targetWidth && py >= 0 && py < targetHeight) {
-                            const idx = (Math.floor(py) * targetWidth + Math.floor(px)) * 4;
-                            const brilho = (dados[idx] * 0.299 + dados[idx+1] * 0.587 + dados[idx+2] * 0.114);
-                            if (brilho < limiarDetecao * 1.2) {
-                                pontuacao += peso;
+                    for (let dy = -raioTest; dy <= raioTest; dy += 2) {
+                        for (let dx = -raioTest; dx <= raioTest; dx += 2) {
+                            if (dx*dx + dy*dy <= raioTest * raioTest) {
+                                totalPontos++;
+                                const px = cx + dx;
+                                const py = cy + dy;
+                                if (px >= 0 && px < targetWidth && py >= 0 && py < targetHeight) {
+                                    const idx = (Math.floor(py) * targetWidth + Math.floor(px)) * 4;
+                                    const brilho = (dados[idx] * 0.299 + dados[idx+1] * 0.587 + dados[idx+2] * 0.114);
+                                    if (brilho < limiarDetecao * 1.1) {
+                                        pontosEscuros++;
+                                    }
+                                }
                             }
                         }
                     }
-                    return pontuacao / 4.2;
+                    
+                    let bordaEscura = 0;
+                    let totalBorda = 0;
+                    for (let ang = 0; ang < 360; ang += 15) {
+                        const rad = ang * Math.PI / 180;
+                        const px = cx + Math.cos(rad) * raio * 0.85;
+                        const py = cy + Math.sin(rad) * raio * 0.85;
+                        if (px >= 0 && px < targetWidth && py >= 0 && py < targetHeight) {
+                            totalBorda++;
+                            const idx = (Math.floor(py) * targetWidth + Math.floor(px)) * 4;
+                            const brilho = (dados[idx] * 0.299 + dados[idx+1] * 0.587 + dados[idx+2] * 0.114);
+                            if (brilho < limiarDetecao * 1.2) {
+                                bordaEscura++;
+                            }
+                        }
+                    }
+                    
+                    const pctCentro = totalPontos > 0 ? pontosEscuros / totalPontos : 0;
+                    const pctBorda = totalBorda > 0 ? bordaEscura / totalBorda : 0;
+                    
+                    return (pctCentro + pctBorda) / 2;
                 }
                 
                 const respostas = [];
@@ -1016,13 +1192,15 @@
                             const opcaoX = cellX + (opt + 0.6) * opcaoWidth;
                             const opcaoY = cellY + cellHeight / 2;
                             
-                            const preenchimento = verificarPreenchimento(opcaoX, opcaoY, circleRadius);
+                            const preenchimento = verificarPreenchimentoMelhorado(opcaoX, opcaoY, circleRadius);
                             
                             overlayCtx.beginPath();
                             overlayCtx.arc(opcaoX, opcaoY, circleRadius, 0, 2 * Math.PI);
                             
-                            if (preenchimento > sensibilidadeCirculo) {
-                                const intensidade = Math.min(preenchimento * 2, 0.9);
+                            const limiarPreenchimento = sensibilidadeCirculo;
+                            
+                            if (preenchimento > limiarPreenchimento) {
+                                const intensidade = Math.min(preenchimento * 1.5, 0.9);
                                 overlayCtx.fillStyle = `rgba(0, 255, 0, ${intensidade})`;
                                 overlayCtx.fill();
                                 overlayCtx.strokeStyle = '#00ff00';
@@ -1033,15 +1211,14 @@
                                 }
                             } else {
                                 overlayCtx.strokeStyle = '#ff8888';
-                                if (preenchimento > 0.05) {
-                                    overlayCtx.fillStyle = `rgba(255, 255, 0, ${preenchimento * 0.4})`;
+                                if (preenchimento > 0.08) {
+                                    overlayCtx.fillStyle = `rgba(255, 255, 0, ${preenchimento * 0.3})`;
                                     overlayCtx.fill();
                                 }
                             }
                             overlayCtx.stroke();
                         }
                         
-                        // Número da questão (sem letras dentro dos círculos)
                         const numQuestao = questaoIndex + 1;
                         overlayCtx.font = `bold ${Math.max(9, circleRadius + 2)}px Arial`;
                         overlayCtx.fillStyle = '#ffff00';
@@ -1052,15 +1229,15 @@
                         if (totalPreenchidas === 1 && melhorOpcao >= 0) {
                             respostas.push(OPCOES[melhorOpcao]);
                             questoesDetectadas++;
-                            overlayCtx.fillStyle = 'rgba(0,255,0,0.10)';
+                            overlayCtx.fillStyle = 'rgba(0,255,0,0.08)';
                             overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
                         } else if (totalPreenchidas > 1) {
                             respostas.push(null);
-                            overlayCtx.fillStyle = 'rgba(255,255,0,0.12)';
+                            overlayCtx.fillStyle = 'rgba(255,255,0,0.10)';
                             overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
                         } else {
                             respostas.push(null);
-                            overlayCtx.fillStyle = 'rgba(255,0,0,0.05)';
+                            overlayCtx.fillStyle = 'rgba(255,0,0,0.04)';
                             overlayCtx.fillRect(cellX, cellY, cellWidth, cellHeight);
                         }
                         
@@ -1069,7 +1246,7 @@
                     if (questaoIndex >= NUM_QUESTOES) break;
                 }
                 
-                // Atualiza resultados
+                // Calcula resultados
                 let acertos = 0;
                 const detalhes = [];
                 for (let i = 0; i < NUM_QUESTOES; i++) {
@@ -1085,9 +1262,24 @@
                 }
                 
                 const nota = (acertos / NUM_QUESTOES) * 10;
-                document.getElementById('resultadoPreview').style.display = 'block';
+                const resultado = {
+                    acertos,
+                    total: NUM_QUESTOES,
+                    nota,
+                    detalhes,
+                    questoesDetectadas
+                };
+                
+                // Armazena a última detecção para captura
+                ultimaDeteccao = {
+                    quadrados: quadrados,
+                    resultado: resultado
+                };
+                
+                // Mostra prévia
+                resultadoPreview.style.display = 'block';
                 document.getElementById('acertosTempoReal').innerHTML = `✅ ${acertos} / ${NUM_QUESTOES}`;
-                document.getElementById('notaTempoReal').innerHTML = `🎓 NOTA: ${nota.toFixed(1)}`;
+                document.getElementById('notaTempoReal').innerHTML = `🎓 NOTA: ${nota.toFixed(1)} (Prévia)`;
                 
                 const grid = document.getElementById('respostasGrid');
                 grid.innerHTML = detalhes.map(d => `
@@ -1098,38 +1290,46 @@
                 
                 const pctDetectado = (questoesDetectadas / NUM_QUESTOES) * 100;
                 if (pctDetectado > 85) {
-                    statusAlinhamento.innerHTML = `✅ Excelente! ${questoesDetectadas}/${NUM_QUESTOES} detectadas`;
+                    statusAlinhamento.innerHTML = `✅ ${questoesDetectadas}/${NUM_QUESTOES} - Clique em CAPTURAR`;
                     statusAlinhamento.className = 'status-alinhamento good';
                 } else if (pctDetectado > 50) {
-                    statusAlinhamento.innerHTML = `🟡 ${questoesDetectadas}/${NUM_QUESTOES} - Ajuste o zoom ou margem`;
+                    statusAlinhamento.innerHTML = `🟡 ${questoesDetectadas}/${NUM_QUESTOES} - Ajuste`;
                     statusAlinhamento.className = 'status-alinhamento warning';
                 } else {
-                    statusAlinhamento.innerHTML = `🔴 ${questoesDetectadas}/${NUM_QUESTOES} - Use zoom e ajuste fino`;
+                    statusAlinhamento.innerHTML = `🔴 ${questoesDetectadas}/${NUM_QUESTOES} - Ajuste a posição`;
                     statusAlinhamento.className = '';
                 }
                 
             } else {
-                deteccaoInfo.textContent = '🔴 Quadrados não detectados. Ajuste o LIMIAR ou a iluminação.';
-                statusAlinhamento.innerHTML = '🔴 Quadrados de referência não encontrados!';
+                deteccaoInfo.textContent = '🔴 Aguardando quadrados... Ajuste a posição da folha.';
+                statusAlinhamento.innerHTML = '🔴 Posicione a folha';
                 statusAlinhamento.className = 'status-alinhamento error';
+                ultimaDeteccao = null;
                 
-                overlayCtx.fillStyle = 'rgba(255,0,0,0.15)';
+                overlayCtx.fillStyle = 'rgba(255,0,0,0.10)';
                 overlayCtx.fillRect(0, 0, targetWidth, targetHeight);
                 overlayCtx.fillStyle = '#ff4444';
-                overlayCtx.font = '28px Arial';
+                overlayCtx.font = '24px Arial';
                 overlayCtx.textAlign = 'center';
                 overlayCtx.textBaseline = 'middle';
-                overlayCtx.fillText('⚠️ Quadrados não detectados', targetWidth/2, targetHeight/2 - 30);
-                overlayCtx.font = '16px Arial';
-                overlayCtx.fillStyle = '#ff8888';
-                overlayCtx.fillText('Ajuste o LIMIAR ou posicione melhor a folha', targetWidth/2, targetHeight/2 + 30);
+                overlayCtx.fillText('⏳ Posicione a folha', targetWidth/2, targetHeight/2);
             }
         }
         
         // ========== EVENTOS ==========
         document.getElementById('btnCorrigirAuto').addEventListener('click', () => {
-            if (leituraAtiva) pararLeitura();
-            else iniciarLeitura();
+            if (leituraAtiva) {
+                pararLeitura();
+            } else {
+                if (capturado) {
+                    // Se já capturado, mostra o resultado capturado
+                    if (resultadoCapturado) {
+                        exibirResultadoCapturado(resultadoCapturado);
+                    }
+                    return;
+                }
+                iniciarLeitura();
+            }
         });
         
         document.getElementById('btnGerenciarProvas').addEventListener('click', () => {
@@ -1156,6 +1356,7 @@
             await salvarProva(nome, numQuestoes, numOpcoes, editId);
             document.getElementById('modalEditarProva').style.display = 'none';
             alert(`✅ Prova "${nome}" salva!`);
+            resetarCaptura();
         });
         
         document.getElementById('btnFecharProvas').addEventListener('click', () => {
@@ -1198,7 +1399,6 @@
             window.location.href = 'index.html';
         });
         
-        // Inicialização
         async function iniciar() {
             await garantirUsuarioExistente();
             await carregarProvasDoSupabase();
